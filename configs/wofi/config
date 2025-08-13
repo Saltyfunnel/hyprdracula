@@ -1,0 +1,26 @@
+[wofi]
+# =========================
+# GENERAL
+# =========================
+width = 50%
+height = 40%
+num-results = 10
+result-spacing = 25
+padding = 1%
+border-width = 0
+outline-width = 0
+prompt = " : "
+font = "JetBrainsMono Nerd Font 12"
+
+# =========================
+# COLORS
+# =========================
+text-color = #f0f0f0
+background-color = #1a1a1acc
+selection-color = #7d7c7cff
+selection-text-color = #000000
+
+# =========================
+# THEME FILE
+# =========================
+theme = "~/.config/wofi/style.css"
