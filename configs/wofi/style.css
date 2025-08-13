@@ -1,0 +1,30 @@
+/* Container / Window */
+window {
+    background-color: rgba(26,26,26,0.8);
+    border-width: 0px;
+    padding: 10px;
+}
+
+/* Entry / Prompt */
+entry {
+    font-family: "JetBrainsMono Nerd Font";
+    font-size: 12px;
+    color: #f0f0f0;
+}
+
+/* List of results */
+listview {
+    spacing: 6px; /* space between results, similar to result-spacing */
+}
+
+/* Individual result item */
+listitem {
+    padding: 6px 10px;
+    border-radius: 6px; /* subtle rounded corners for hover highlight */
+}
+
+/* Hover / selection */
+listitem:selected {
+    background-color: #7d7c7cff;
+    color: #000000;
+}
