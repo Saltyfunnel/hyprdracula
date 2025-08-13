@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# --- Variables ---
+set -euo pipefail
+
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME=$(eval echo "~$USER_NAME")
@@ -9,98 +10,87 @@ REPO_DIR="$USER_HOME/hyprdracula"
 ASSETS_SRC="$REPO_DIR/assets"
 ASSETS_DEST="$CONFIG_DIR/assets"
 
-# --- Helper functions ---
-log_message() { echo -e "[LOG] $*"; }
-print_info() { echo -e "[INFO] $*"; }
-print_warning() { echo -e "[WARN] $*"; }
-print_success() { echo -e "[OK] $*"; }
-
 run_command() {
-    local cmd="$1" desc="$2"
-    print_info "$desc..."
-    eval "$cmd"
-    if [ $? -eq 0 ]; then
-        print_success "$desc completed."
-    else
-        print_warning "$desc failed."
-    fi
+    echo -e "\n[RUNNING] $1"
+    eval "$1"
+    echo -e "[DONE] $1"
 }
 
 copy_as_user() {
     local src="$1" dest="$2"
-    [[ ! -d "$src" ]] && { print_warning "Source not found: $src"; return 1; }
-    run_command "mkdir -p \"$dest\"" "Create $dest"
-    run_command "cp -r \"$src\"/* \"$dest\"" "Copy $src -> $dest"
-    run_command "chown -R $USER_NAME:$USER_NAME \"$dest\"" "Fix ownership"
+    [[ ! -d "$src" ]] && { echo "[WARN] Source not found: $src"; return 1; }
+    run_command "mkdir -p \"$dest\""
+    run_command "cp -r \"$src\"/* \"$dest\""
+    run_command "chown -R $USER_NAME:$USER_NAME \"$dest\""
 }
 
-# --- Pacman apps ---
-PACMAN_APPS="firefox waybar kitty thunar starship"
-run_command "pacman -S --noconfirm $PACMAN_APPS" "Installing core Pacman apps"
+echo -e "\n[INFO] Updating pacman and installing packages with live output"
+PACMAN_PACKAGES=(
+    pipewire wireplumber pamixer brightnessctl
+    ttf-cascadia-code-nerd ttf-cascadia-mono-nerd ttf-fira-code ttf-fira-mono ttf-fira-sans
+    ttf-iosevka-nerd ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols ttf-nerd-fonts-symbols-mono
+    sddm kitty nano tar gnome-disk-utility code mpv dunst pacman-contrib exo thunar
+    thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller gvfs gvfs-mtp
+    gvfs-gphoto2 gvfs-smb polkit polkit-gnome waybar cliphist firefox
+)
+sudo pacman -Syu --needed --noconfirm "${PACMAN_PACKAGES[@]}"
 
-# --- Copy configs ---
+echo -e "\n[INFO] Installing AUR packages with yay (live output)"
+AUR_PACKAGES=(
+    wofi swww hyprpicker hyprlock grimblast hypridle
+    fastfetch starship
+)
+sudo -u "$USER_NAME" yay -S --needed --noconfirm "${AUR_PACKAGES[@]}"
+
+# Copy configs
 copy_as_user "$REPO_DIR/configs/waybar" "$CONFIG_DIR/waybar"
-copy_as_user "$REPO_DIR/configs/kitty" "$CONFIG_DIR/kitty"
-copy_as_user "$REPO_DIR/configs/thunar" "$CONFIG_DIR/thunar"
+copy_as_user "$REPO_DIR/configs/wofi" "$CONFIG_DIR/wofi"
+copy_as_user "$REPO_DIR/configs/hypr" "$CONFIG_DIR/hypr"
+copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
 copy_as_user "$REPO_DIR/configs/starship" "$CONFIG_DIR/starship"
+copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
 
-# --- AUR apps ---
-AUR_APPS="wofi fastfetch swww hyprpicker hyprlock grimblast hypridle"
-sudo -u "$USER_NAME" bash -c "
-mkdir -p /tmp/aurbuild
-cd /tmp/aurbuild
-for app in $AUR_APPS; do
-    [ -d \$app ] || git clone https://aur.archlinux.org/\$app.git
-    cd \$app
-    makepkg -si --noconfirm
-    cd ..
-done
-rm -rf /tmp/aurbuild
-"
-
-# --- Fastfetch integration ---
+# Fastfetch and Starship setup
 for shell_rc in .bashrc .zshrc; do
-    FILE="$USER_HOME/$shell_rc"
-    LINE="fastfetch --kitty-direct $CONFIG_DIR/fastfetch/archkitty.png"
-    [[ -f "$FILE" ]] && ! grep -qF "$LINE" "$FILE" && echo -e "\n# Run fastfetch on terminal start\n$LINE" >> "$FILE"
+    path="$USER_HOME/$shell_rc"
+    fastfetch_line="fastfetch --kitty-direct $CONFIG_DIR/fastfetch/archkitty.png"
+    starship_line='eval "$(starship init '"${shell_rc#.}"')"'
+    [[ -f "$path" ]] && ! grep -qF "$fastfetch_line" "$path" && echo -e "\n# Run fastfetch on terminal start\n$fastfetch_line" >> "$path"
+    [[ -f "$path" ]] && ! grep -qF "$starship_line" "$path" && echo -e "\n$starship_line" >> "$path"
 done
 
-# --- Starship shell integration ---
-for shell_rc in .bashrc .zshrc; do
-    LINE='eval "$(starship init '"${shell_rc#.}"' )"'
-    FILE="$USER_HOME/$shell_rc"
-    [[ -f "$FILE" ]] && ! grep -qF "$LINE" "$FILE" && echo -e "\n$LINE" >> "$FILE"
-done
+# Oh My Zsh and default shell
+if [[ ! -d "$USER_HOME/.oh-my-zsh" ]]; then
+    sudo -u "$USER_NAME" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    chsh -s "$(which zsh)" "$USER_NAME"
+fi
 
-# --- Dracula icons ---
-sudo -u "$USER_NAME" bash -c "
-git clone --depth=1 https://github.com/dracula/gtk.git /tmp/dracula-icons
-mkdir -p $CONFIG_DIR/icons
-cp -r /tmp/dracula-icons/* $CONFIG_DIR/icons
-rm -rf /tmp/dracula-icons
-"
+# Dracula icons
+DRACULA_ICONS_REPO="https://github.com/dracula/papirus.git"
+TMP_DIR=$(mktemp -d)
+git clone --depth=1 "$DRACULA_ICONS_REPO" "$TMP_DIR"
+cp -r "$TMP_DIR" "$USER_HOME/.icons/dracula"
+chown -R "$USER_NAME:$USER_NAME" "$USER_HOME/.icons/dracula"
+rm -rf "$TMP_DIR"
 
-# --- GTK themes ---
+# GTK3/4 Dracula theme
 GTK3_DIR="$CONFIG_DIR/gtk-3.0"
 GTK4_DIR="$CONFIG_DIR/gtk-4.0"
 mkdir -p "$GTK3_DIR" "$GTK4_DIR"
 GTK_SETTINGS="[Settings]
 gtk-theme-name=Dracula
-gtk-icon-theme-name=Dracula
+gtk-icon-theme-name=dracula
 gtk-font-name=JetBrainsMono 10"
 echo "$GTK_SETTINGS" | sudo -u "$USER_NAME" tee "$GTK3_DIR/settings.ini" "$GTK4_DIR/settings.ini" >/dev/null
 
-# --- SDDM Dracula theme ---
+# SDDM Dracula theme
 DRACULA_SDDM_REPO="https://github.com/dracula/sddm.git"
 DRACULA_TEMP="/tmp/dracula-sddm"
 git clone --depth=1 "$DRACULA_SDDM_REPO" "$DRACULA_TEMP"
-cp -r "$DRACULA_TEMP/sddm/themes/dracula" "/usr/share/sddm/themes/dracula"
-chown -R root:root "/usr/share/sddm/themes/dracula"
-mkdir -p /etc/sddm.conf.d
-echo -e "[Theme]\nCurrent=dracula" > /etc/sddm.conf.d/10-theme.conf
+sudo cp -r "$DRACULA_TEMP/sddm/themes/dracula" "/usr/share/sddm/themes/dracula"
+sudo chown -R root:root "/usr/share/sddm/themes/dracula"
+sudo mkdir -p /etc/sddm.conf.d
+echo -e "[Theme]\nCurrent=dracula" | sudo tee /etc/sddm.conf.d/10-theme.conf
 rm -rf "$DRACULA_TEMP"
 
-# --- Copy assets ---
-copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
-
-print_success "One-stop setup completed. Reboot recommended for full effect."
+echo -e "\n[SETUP COMPLETE] All packages installed with live output, configs applied, themes set, and Zsh default shell."
