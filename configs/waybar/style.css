@@ -8,38 +8,38 @@
 }
 
 window#waybar {
-    background: rgba(0, 0, 0, 0);
-    color: #e0e0e0;
+    background: rgba(40, 42, 54, 0.9);
+    color: #f8f8f2;
 }
 
 #workspaces button {
     padding: 5px;
-    color: #7f7f7f;
-    background: #1a1a1a;
+    color: #6272a4;
+    background: #282a36;
     margin-right: 5px;
 }
 
 #workspaces button.active {
-    color: #ffffff;
-    background: #2a2a2a;
+    color: #f8f8f2;
+    background: #44475a;
     border-radius: 8px;
 }
 
 #workspaces button.focused {
-    color: #ffffff;
-    background: #444444;
+    color: #f8f8f2;
+    background: #6272a4;
     border-radius: 8px;
 }
 
 #workspaces button.urgent {
-    color: #000000;
-    background: #aaaaaa;
+    color: #282a36;
+    background: #ff5555;
     border-radius: 8px;
 }
 
 #workspaces button:hover {
-    background: #dddddd;
-    color: #000000;
+    background: #50fa7b;
+    color: #282a36;
     border-radius: 8px;
 }
 
@@ -54,11 +54,11 @@ window#waybar {
 #tray,
 #backlight,
 #custom-power {
-    background: #1a1a1a;
+    background: #282a36;
     padding: 0px 10px;
     margin: 3px 0px;
     margin-top: 5px;
-    color: #e0e0e0;
+    color: #f8f8f2;
 }
 
 #backlight {
@@ -93,65 +93,64 @@ window#waybar {
 }
 
 #clock {
-    color: #d0d0d0;
+    color: #f8f8f2;
     border-radius: 10px;
     margin-left: 5px;
 }
 
 #network {
-    color: #c0c0c0;
+    color: #f8f8f2;
     border-radius: 10px 0px 0px 10px;
 }
 
 #pulseaudio {
-    color: #c0c0c0;
+    color: #f8f8f2;
     border-left: 0px;
     border-right: 0px;
 }
 
 #pulseaudio.microphone {
-    color: #c0c0c0;
+    color: #f8f8f2;
     border-radius: 0px 10px 10px 0px;
     margin-right: 5px;
 }
 
 #battery {
-    color: #d0d0d0;
+    color: #f8f8f2;
     border-radius: 0px 10px 10px 0px;
     margin-right: 10px;
 }
 
 #custom-power {
-    color: #ffffff;
-    background: #1a1a1a;
+    color: #f8f8f2;
+    background: #282a36;
     padding: 0 10px;
     border-radius: 8px;
 }
 
 #custom-power:hover {
-    background: #333333;
+    background: #44475a;
 }
 
 #custom-spotify {
-  background: #1a1a1a;
-  padding: 0 10px;
-  margin: 3px 6px 3px 0px; /* top right bottom left */
-  margin-top: 5px;
-  color: #e0e0e0;
-  border-radius: 8px;
-  font-weight: bold;
-  min-width: 150px;
+    background: #282a36;
+    padding: 0 10px;
+    margin: 3px 6px 3px 0px;
+    margin-top: 5px;
+    color: #f8f8f2;
+    border-radius: 8px;
+    font-weight: bold;
+    min-width: 150px;
 }
 
 #custom-updates {
-  background: #1a1a1a;
-  padding: 4px 8px;
-  margin: 4px 6px 4px 0;
-  color: #e0e0e0;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 13px;
-  font-family: "Font Awesome 6 Free", "Symbols Nerd Font Mono", sans-serif;
-  min-width: 0;
+    background: #282a36;
+    padding: 4px 8px;
+    margin: 4px 6px 4px 0;
+    color: #f8f8f2;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 13px;
+    font-family: "Font Awesome 6 Free", "Symbols Nerd Font Mono", sans-serif;
+    min-width: 0;
 }
-
