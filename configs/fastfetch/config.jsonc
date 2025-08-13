@@ -6,12 +6,12 @@
     "padding": { "top": 3, "right": 4, "bottom": 1, "left": 4 }
   },
   "display": {
-    "separator": " : "
+    "separator": "\u001b[38;2;248;248;242m : "
   },
   "modules": [
     {
       "type": "custom",
-      "format": "  \u001b[38;5;99m               "
+      "format": "  \u001b[38;2;189;147;249m               "
     },
     {
       "type": "custom",
@@ -19,8 +19,7 @@
     },
     {
       "type": "custom",
-      "format": "     My conscience is clean — I have never used it.  ",
-      "keyColor": "99"
+      "format": "  \u001b[38;2;80;250;123m   My conscience is clean — I have never used it.  "
     },
     {
       "type": "custom",
@@ -28,65 +27,53 @@
     },
     {
       "type": "os",
-      "key": "   OS",
-      "keyColor": "141"
+      "key": "\u001b[38;2;139;233;253m   OS"
     },
     {
       "type": "kernel",
-      "key": "   Kernel",
-      "keyColor": "147"
+      "key": "\u001b[38;2;189;147;249m   Kernel"
     },
     {
       "type": "packages",
-      "key": "  󰏗 Packages",
-      "keyColor": "141"
+      "key": "\u001b[38;2;139;233;253m  󰏗 Packages"
     },
     {
       "type": "display",
-      "key": "  󱍜 Display",
-      "keyColor": "104"
+      "key": "\u001b[38;2;255;184;108m  󱍜 Display"
     },
     {
       "type": "wm",
-      "key": "   WM",
-      "keyColor": "145"
+      "key": "\u001b[38;2;189;147;249m   WM"
     },
     {
       "type": "terminal",
-      "key": "   Terminal",
-      "keyColor": "102"
+      "key": "\u001b[38;2;80;250;123m   Terminal"
     },
     {
       "type": "media",
-      "key": "  󰝚 Music",
-      "keyColor": "141"
+      "key": "\u001b[38;2;139;233;253m  󰝚 Music"
     },
     {
       "type": "command",
-      "key": "  󱦟 OS Age",
-      "keyColor": "104",
+      "key": "\u001b[38;2;255;184;108m  󱦟 OS Age",
       "text": "birth_install=$(stat -c %W /); current=$(date +%s); time_progression=$((current - birth_install)); days_difference=$((time_progression / 86400)); echo $days_difference days"
     },
     {
       "type": "uptime",
-      "key": "  ",
-      "keyColor": "141"
+      "key": "\u001b[38;2;139;233;253m  "
     },
     {
       "type": "custom",
-      "format": "  󰊤 GitHub : Saltyfunnel",
-      "keyColor": "104"
+      "format": "\u001b[38;2;255;121;198m  󰊤 GitHub : Saltyfunnel"
     },
     {
       "type": "battery",
-      "key": "   Battery",
-      "keyColor": "104"
+      "key": "\u001b[38;2;255;184;108m   Battery"
     },
     "break",
     {
       "type": "title",
-      "key": "   User",
-      "keyColor": "147"
+      "key": "\u001b[38;2;189;147;249m   User"
     },
     {
       "type": "custom",
@@ -95,25 +82,21 @@
     {
       "type": "cpu",
       "format": "{1}",
-      "key": "   CPU",
-      "keyColor": "145"
+      "keyColor": "\u001b[38;2;189;147;249m"
     },
     {
       "type": "gpu",
       "format": "{2}",
-      "key": "   GPU",
-      "keyColor": "141"
+      "keyColor": "\u001b[38;2;139;233;253m"
     },
     {
       "type": "gpu",
       "format": "{3}",
-      "key": "   GPU Driver",
-      "keyColor": "104"
+      "keyColor": "\u001b[38;2;255;184;108m"
     },
     {
       "type": "memory",
-      "key": "   Memory",
-      "keyColor": "145"
+      "key": "\u001b[38;2;189;147;249m   Memory"
     },
     {
       "type": "custom",
@@ -122,7 +105,7 @@
     "break",
     {
       "type": "custom",
-      "format": "  \u001b[38;5;99m               "
+      "format": "  \u001b[38;2;189;147;249m               "
     },
     "break"
   ]
