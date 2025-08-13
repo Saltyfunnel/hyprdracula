@@ -6,12 +6,11 @@ source "$SCRIPT_DIR/helper.sh"
 log_message "Installation started for utilities section"
 print_info "\nStarting utilities setup..."
 
-# Detect the user running sudo (or fallback to current user)
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME=$(eval echo "~$USER_NAME")
 
 CONFIG_DIR="$USER_HOME/.config"
-REPO_DIR="$USER_HOME/hyprbw"
+REPO_DIR="$USER_HOME/hyprdracula"  # Note: new Dracula repo
 ASSETS_SRC="$REPO_DIR/assets"
 ASSETS_DEST="$CONFIG_DIR/assets"
 
@@ -29,7 +28,7 @@ copy_as_user() {
     run_command "chown -R $USER_NAME:$USER_NAME \"$dest\"" "Fix ownership for $dest" "no" "yes"
 }
 
-# Install core utilities
+# Core utilities
 run_command "pacman -S --noconfirm waybar" "Install Waybar" "yes"
 copy_as_user "$REPO_DIR/configs/waybar" "$CONFIG_DIR/waybar"
 
@@ -39,7 +38,7 @@ copy_as_user "$REPO_DIR/configs/tofi" "$CONFIG_DIR/tofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
 copy_as_user "$REPO_DIR/configs/hypr" "$CONFIG_DIR/hypr"
 
-# Add fastfetch to shells
+# Fastfetch integration
 add_fastfetch_to_shell() {
     local shell_rc="$1"
     local shell_rc_path="$USER_HOME/$shell_rc"
@@ -55,7 +54,6 @@ add_fastfetch_to_shell ".bashrc"
 add_fastfetch_to_shell ".zshrc"
 
 run_command "pacman -S --noconfirm cliphist" "Install Cliphist" "yes"
-
 copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
 
 # Starship config
@@ -71,7 +69,7 @@ add_starship_to_shell() {
     local shell_rc="$1"
     local shell_name="$2"
     local shell_rc_path="$USER_HOME/$shell_rc"
-    local starship_line='eval "$(starship init '"$shell_name"')"'
+    local starship_line='eval "$(starship init '"$shell_name"')"' 
 
     if [ -f "$shell_rc_path" ] && ! grep -qF "$starship_line" "$shell_rc_path"; then
         echo -e "\n$starship_line" >> "$shell_rc_path"
@@ -82,7 +80,7 @@ add_starship_to_shell() {
 add_starship_to_shell ".bashrc" "bash"
 add_starship_to_shell ".zshrc" "zsh"
 
-# Papirus icons and folder coloring
+# Papirus icons (optional, works with Dracula GTK)
 run_command "pacman -S --noconfirm papirus-icon-theme" "Install Papirus Icon Theme" "yes"
 
 if ! command -v papirus-folders &>/dev/null; then
@@ -94,33 +92,31 @@ fi
 
 sudo -u "$USER_NAME" dbus-launch papirus-folders -C grey --theme Papirus-Dark
 
-# GTK theming
+# --- Dracula GTK theming ---
 GTK3_CONFIG_DIR="$USER_HOME/.config/gtk-3.0"
 GTK4_CONFIG_DIR="$USER_HOME/.config/gtk-4.0"
 
 mkdir -p "$GTK3_CONFIG_DIR" "$GTK4_CONFIG_DIR"
 
 GTK_SETTINGS_CONTENT="[Settings]
-gtk-theme-name=FlatColor
+gtk-theme-name=Dracula
 gtk-icon-theme-name=Papirus-Dark
 gtk-font-name=JetBrainsMono 10"
 
 echo "$GTK_SETTINGS_CONTENT" | sudo -u "$USER_NAME" tee "$GTK3_CONFIG_DIR/settings.ini" "$GTK4_CONFIG_DIR/settings.ini" >/dev/null
-chown -R "$USER_NAME:$USER_NAME" "$GTK3_CONFIG_DIR" "$GTK4_CONFIG_DIR"
-
 sudo -u "$USER_NAME" dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'
 
-# SDDM theming
-MONO_SDDM_REPO="https://github.com/pwyde/monochrome-kde.git"
-MONO_SDDM_TEMP="/tmp/monochrome-kde"
-MONO_THEME_NAME="monochrome"
+# SDDM Dracula theme
+DRACULA_SDDM_REPO="https://github.com/dracula/sddm.git"
+DRACULA_SDDM_TEMP="/tmp/dracula-sddm"
+DRACULA_THEME_NAME="dracula"
 
-git clone --depth=1 "$MONO_SDDM_REPO" "$MONO_SDDM_TEMP"
-cp -r "$MONO_SDDM_TEMP/sddm/themes/$MONO_THEME_NAME" "/usr/share/sddm/themes/$MONO_THEME_NAME"
-chown -R root:root "/usr/share/sddm/themes/$MONO_THEME_NAME"
+git clone --depth=1 "$DRACULA_SDDM_REPO" "$DRACULA_SDDM_TEMP"
+cp -r "$DRACULA_SDDM_TEMP/sddm/themes/$DRACULA_THEME_NAME" "/usr/share/sddm/themes/$DRACULA_THEME_NAME"
+chown -R root:root "/usr/share/sddm/themes/$DRACULA_THEME_NAME"
 mkdir -p /etc/sddm.conf.d
-echo -e "[Theme]\nCurrent=$MONO_THEME_NAME" > /etc/sddm.conf.d/10-theme.conf
-rm -rf "$MONO_SDDM_TEMP"
+echo -e "[Theme]\nCurrent=$DRACULA_THEME_NAME" > /etc/sddm.conf.d/10-theme.conf
+rm -rf "$DRACULA_SDDM_TEMP"
 
 # Thunar Kitty custom action
 setup_thunar_kitty_action() {
@@ -162,4 +158,4 @@ $kitty_action_xml
 
 setup_thunar_kitty_action
 
-print_success "\nUtilities setup complete!"
+print_success "\nUtilities setup complete with Dracula theme!"
