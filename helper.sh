@@ -1,18 +1,24 @@
 #!/bin/bash
+# Dracula-themed helper functions for HyprDracula setup
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
+# Dracula color palette
+DRACULA_BG='\033[48;5;234m'    # Dark background
+DRACULA_FG='\033[38;5;248m'    # Light gray foreground
+DRACULA_PINK='\033[38;5;205m'  # Pink / magenta
+DRACULA_PURPLE='\033[38;5;141m'
+DRACULA_ORANGE='\033[38;5;214m'
+DRACULA_GREEN='\033[38;5;80m'
+DRACULA_RED='\033[38;5;203m'
+DRACULA_YELLOW='\033[38;5;229m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-print_error()   { echo -e "${RED}$1${NC}"; }
-print_success() { echo -e "${GREEN}$1${NC}"; }
-print_warning() { echo -e "${YELLOW}$1${NC}"; }
-print_info()    { echo -e "${BLUE}$1${NC}"; }
-print_bold_blue() { echo -e "${BLUE}${BOLD}$1${NC}"; }
-print_header()  { echo -e "\n${BOLD}${BLUE}==> $1${NC}"; }
+print_error()    { echo -e "${DRACULA_RED}$1${NC}"; }
+print_success()  { echo -e "${DRACULA_GREEN}$1${NC}"; }
+print_warning()  { echo -e "${DRACULA_ORANGE}$1${NC}"; }
+print_info()     { echo -e "${DRACULA_PURPLE}$1${NC}"; }
+print_bold_pink(){ echo -e "${DRACULA_PINK}${BOLD}$1${NC}"; }
+print_header()   { echo -e "\n${BOLD}${DRACULA_PURPLE}==> $1${NC}"; }
 
 ask_confirmation() {
   while true; do
@@ -30,7 +36,7 @@ run_command() {
   local cmd="$1"
   local description="$2"
   local ask_confirm="${3:-yes}"
-  local use_sudo="${4:-yes}" # yes=run as root, no=run as unprivileged user
+  local use_sudo="${4:-yes}" # yes=run as root, no=run as user
 
   local full_cmd=""
   if [[ "$use_sudo" == "no" ]]; then
