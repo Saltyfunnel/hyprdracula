@@ -1,86 +1,79 @@
 #!/bin/bash
-set -euo pipefail
 
-# --- Basic paths and user info ---
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME=$(eval echo "~$USER_NAME")
-REPO_DIR="$USER_HOME/hyprdracula"
 CONFIG_DIR="$USER_HOME/.config"
+REPO_DIR="$USER_HOME/hyprdracula"    # Your Dracula repo
 ASSETS_SRC="$REPO_DIR/assets"
 ASSETS_DEST="$CONFIG_DIR/assets"
 
 # --- Helper functions ---
+log_message() { echo -e "[INFO] $1"; }
+print_success() { echo -e "\e[32m[SUCCESS]\e[0m $1"; }
+print_warning() { echo -e "\e[33m[WARNING]\e[0m $1"; }
+print_info() { echo -e "\e[34m[INFO]\e[0m $1"; }
+
 run_command() {
-    local cmd="$1"; local msg="$2"
-    echo -e "\n➡️ $msg..."
+    local cmd="$1"; shift
+    local desc="$1"; shift
+    print_info "$desc..."
     eval "$cmd"
+    if [ $? -eq 0 ]; then
+        print_success "$desc completed."
+    else
+        print_warning "$desc failed."
+    fi
 }
 
 copy_as_user() {
     local src="$1" dest="$2"
-    if [[ -d "$src" ]]; then
-        sudo -u "$USER_NAME" mkdir -p "$dest"
-        sudo -u "$USER_NAME" cp -r "$src/"* "$dest/"
-        sudo -u "$USER_NAME" chown -R "$USER_NAME:$USER_NAME" "$dest"
-        echo "✅ Copied $src -> $dest"
-    else
-        echo "⚠️ Source not found: $src"
-    fi
+    [[ ! -d "$src" ]] && { print_warning "Source not found: $src"; return 1; }
+    run_command "mkdir -p \"$dest\"" "Create $dest"
+    run_command "cp -r \"$src\"/* \"$dest\"" "Copy $src -> $dest"
+    run_command "chown -R $USER_NAME:$USER_NAME \"$dest\"" "Fix ownership"
 }
 
-# --- Update system ---
-run_command "pacman -Syyu --noconfirm" "Updating system packages"
-
-# --- Install core packages with pacman ---
-PACMAN_PACKAGES=(
-    firefox
-    pipewire wireplumber pamixer brightnessctl
-    ttf-cascadia-code-nerd ttf-cascadia-mono-nerd ttf-fira-code ttf-fira-mono ttf-fira-sans
-    ttf-iosevka-nerd ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols ttf-nerd-fonts-symbols-mono
-    sddm kitty nano tar gnome-disk-utility code mpv dunst pacman-contrib exo
-    thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
-    gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
-    waybar wofi starship
-)
-run_command "pacman -S --noconfirm ${PACMAN_PACKAGES[*]}" "Installing system packages"
-
-# --- Enable polkit and SDDM ---
-run_command "systemctl enable --now polkit.service" "Enable polkit"
-run_command "systemctl enable sddm.service" "Enable SDDM"
-
-# --- GPU Drivers detection ---
-GPU_INFO=$(lspci | grep -Ei "VGA|3D")
-if echo "$GPU_INFO" | grep -qi "nvidia"; then
-    run_command "pacman -S --noconfirm nvidia nvidia-utils nvidia-settings" "Install NVIDIA drivers"
-elif echo "$GPU_INFO" | grep -qi "amd"; then
-    run_command "pacman -S --noconfirm xf86-video-amdgpu vulkan-radeon libva-mesa-driver mesa-vdpau" "Install AMD drivers"
-elif echo "$GPU_INFO" | grep -qi "intel"; then
-    run_command "pacman -S --noconfirm mesa libva-intel-driver intel-media-driver vulkan-intel" "Install Intel drivers"
-else
-    echo "⚠️ No supported GPU detected: $GPU_INFO"
-fi
-
-# --- Copy configs ---
+# --- Core utilities ---
+run_command "pacman -S --noconfirm waybar wofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship firefox thunar" "Install core utilities"
 copy_as_user "$REPO_DIR/configs/waybar" "$CONFIG_DIR/waybar"
 copy_as_user "$REPO_DIR/configs/wofi" "$CONFIG_DIR/wofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
 copy_as_user "$REPO_DIR/configs/hypr" "$CONFIG_DIR/hypr"
 copy_as_user "$REPO_DIR/configs/starship" "$CONFIG_DIR/starship"
 
-# --- Fastfetch & Starship integration ---
-for shell_rc in ".bashrc" ".zshrc"; do
-    FASTFETCH_LINE="fastfetch --kitty-direct $CONFIG_DIR/fastfetch/archkitty.png"
-    STARSHIP_LINE='eval "$(starship init bash)"'
-    SHELL_FILE="$USER_HOME/$shell_rc"
-    [[ -f "$SHELL_FILE" ]] && ! grep -qF "$FASTFETCH_LINE" "$SHELL_FILE" && echo -e "\n$FASTFETCH_LINE" >> "$SHELL_FILE" && chown "$USER_NAME:$USER_NAME" "$SHELL_FILE"
-    [[ -f "$SHELL_FILE" ]] && ! grep -qF "$STARSHIP_LINE" "$SHELL_FILE" && echo -e "\n$STARSHIP_LINE" >> "$SHELL_FILE" && chown "$USER_NAME:$USER_NAME" "$SHELL_FILE"
-done
+# --- Fastfetch integration ---
+add_fastfetch_to_shell() {
+    local shell_rc="$1"
+    local line="fastfetch --kitty-direct $CONFIG_DIR/fastfetch/archkitty.png"
+    local path="$USER_HOME/$shell_rc"
+    [[ -f "$path" ]] && ! grep -qF "$line" "$path" && echo -e "\n# Run fastfetch on terminal start\n$line" >> "$path" && chown "$USER_NAME:$USER_NAME" "$path"
+}
+add_fastfetch_to_shell ".bashrc"
+add_fastfetch_to_shell ".zshrc"
 
-# --- GTK Dracula theme & Dracula icons ---
+# --- Starship shell integration ---
+add_starship_to_shell() {
+    local shell_rc="$1" shell_name="$2"
+    local line='eval "$(starship init '"$shell_name"')"'
+    local path="$USER_HOME/$shell_rc"
+    [[ -f "$path" ]] && ! grep -qF "$line" "$path" && echo -e "\n$line" >> "$path" && chown "$USER_NAME:$USER_NAME" "$path"
+}
+add_starship_to_shell ".bashrc" "bash"
+add_starship_to_shell ".zshrc" "zsh"
+
+# --- Dracula icons ---
+DRACULA_ICON_REPO="https://github.com/dracula/icons.git"
+ICON_TEMP="/tmp/dracula-icons"
+git clone --depth=1 "$DRACULA_ICON_REPO" "$ICON_TEMP"
+run_command "cp -r $ICON_TEMP/* /usr/share/icons" "Install Dracula icons"
+rm -rf "$ICON_TEMP"
+
+# --- GTK3/4 Dracula theme ---
 GTK3_DIR="$CONFIG_DIR/gtk-3.0"
 GTK4_DIR="$CONFIG_DIR/gtk-4.0"
 mkdir -p "$GTK3_DIR" "$GTK4_DIR"
+chown -R "$USER_NAME:$USER_NAME" "$GTK3_DIR" "$GTK4_DIR"
 GTK_SETTINGS="[Settings]
 gtk-theme-name=Dracula
 gtk-icon-theme-name=Dracula
@@ -100,13 +93,12 @@ rm -rf "$DRACULA_TEMP"
 # --- Copy assets ---
 copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
 
-# --- Thunar Dracula configuration ---
+# --- Thunar Kitty action ---
 THUNAR_DIR="$CONFIG_DIR/Thunar"
-mkdir -p "$THUNAR_DIR"
-chown "$USER_NAME:$USER_NAME" "$THUNAR_DIR"
+mkdir -p "$THUNAR_DIR" && chown "$USER_NAME:$USER_NAME" "$THUNAR_DIR" && chmod 700 "$THUNAR_DIR"
 UCA_FILE="$THUNAR_DIR/uca.xml"
 KITTY_ACTION='<action><icon>utilities-terminal</icon><name>Open Kitty Here</name><command>kitty --directory=%d</command><description>Open kitty terminal in the current folder</description><patterns>*</patterns><directories_only>true</directories_only><startup_notify>true</startup_notify></action>'
-if [[ ! -f "$UCA_FILE" ]]; then
+if [ ! -f "$UCA_FILE" ]; then
     cat > "$UCA_FILE" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <actions>
@@ -121,4 +113,4 @@ $KITTY_ACTION
     chown "$USER_NAME:$USER_NAME" "$UCA_FILE"
 fi
 
-echo -e "\n✅ HyprDracula full setup complete! Reboot to apply all changes."
+print_success "Utilities and theming setup completed."
