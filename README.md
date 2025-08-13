@@ -33,7 +33,7 @@ The name “**Hyprdrac**” doesn’t mean anything. It was probably meant to be
 You're brave. Here's how to get this nonsense on your system:
 
 ```bash
-git clone https://github.com/Saltyfunnel/hyprbw
+git clone https://github.com/Saltyfunnel/hyprdracula
 cd hyprbw
 chmod +x scripts/*.sh
 cd scripts
@@ -47,7 +47,7 @@ You should probably read that script first. It might overwrite stuff. Or break y
 - Arch Linux (because of course)
 - `hyprland`
 - `waybar`
-- `tofi`
+- `wofi`
 - `kitty` or `alacritty` or whatever terminal I was using that week
 - `swww`, `playerctl`, `networkmanager`, `blueman`, `pipewire`, probably `dunst`, maybe `eww`, definitely pain
 - Fonts? Icons? GTK themes? You'll figure it out.
