@@ -1,4 +1,4 @@
-# HyprBW
+# Hyprdrac
 
 > *My personal Hyprland setup, handcrafted through a fog of confusion, bad decisions, and AI-enabled incompetence.*
 
@@ -6,7 +6,7 @@
 
 This is my attempt at a fully riced Hyprland setup. It includes all the usual suspects: custom window manager configs, translucent widgets, 17 different launchers, and enough bloat to make even KDE blush.
 
-The name “**HyprBW**” doesn’t mean anything. It was probably meant to be cool. Or minimalist. Or something. I don’t remember. Honestly, **neither does ChatGPT**, who wrote 80% of this while I forgot what I even asked for.
+The name “**Hyprdrac**” doesn’t mean anything. It was probably meant to be cool. Or minimalist. Or something. I don’t remember. Honestly, **neither does ChatGPT**, who wrote 80% of this while I forgot what I even asked for.
 
 ## 👎 Why It’s Terrible
 
