@@ -46,7 +46,7 @@ add_starship_to_shell() {
     fi
 }
 
-# --- Root Checks ---
+# --- Root checks ---
 check_root
 check_os
 
@@ -54,7 +54,7 @@ print_header "🚀 Starting Full Dracula Hyprland Setup"
 
 # --- System Packages ---
 PACKAGES=(
-    git base-devel yay pipewire wireplumber pamixer brightnessctl
+    git base-devel pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
     sddm kitty nano tar gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
@@ -71,14 +71,14 @@ run_command "systemctl enable sddm.service" "Enable SDDM" "yes"
 if ! command -v yay &>/dev/null; then
     run_command "git clone https://aur.archlinux.org/yay.git /tmp/yay" "Clone yay" "no" "no"
     run_command "chown -R $USER_NAME:$USER_NAME /tmp/yay" "Fix ownership" "no" "no"
-    run_command "cd /tmp/yay && sudo -u $USER_NAME makepkg -si --noconfirm" "Build yay" "no" "no"
+    run_command "sudo -u $USER_NAME bash -c 'cd /tmp/yay && makepkg -si --noconfirm'" "Build yay" "no" "no"
     run_command "rm -rf /tmp/yay" "Clean yay temp" "no" "no"
 fi
 
 # --- AUR Utilities ---
 AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus)
 for pkg in "${AUR_PACKAGES[@]}"; do
-    run_command "yay -S --noconfirm $pkg" "Install $pkg via AUR" "yes" "no"
+    run_command "sudo -u $USER_NAME yay -S --noconfirm $pkg" "Install $pkg via AUR" "yes" "no"
 done
 
 # --- Copy Configs ---
@@ -106,9 +106,10 @@ selection-text-color = #f8f8f2
 prompt-color = #ff79c6
 EOF
 
-# --- Fastfetch & Starship ---
+# --- Fastfetch & Starship Shell Integration ---
 add_fastfetch_to_shell ".bashrc"
 add_fastfetch_to_shell ".zshrc"
+
 STARSHIP_SRC="$REPO_DIR/configs/starship/starship.toml"
 STARSHIP_DEST="$CONFIG_DIR/starship.toml"
 if [ -f "$STARSHIP_SRC" ]; then
@@ -159,13 +160,4 @@ EOF
     chown "$USER_NAME:$USER_NAME" "$UCA_FILE"
 fi
 
-# --- GTK & Thunar Theme Fix ---
-print_header "Applying GTK and Thunar theme fixes"
-sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$USER_HOME/.local/share/icons/Dracula" || true
-sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "/usr/share/icons/Dracula" || true
-pkill -x thunar || true
-sudo -u "$USER_NAME" thunar --daemon &
-print_success "✅ GTK and Thunar theme fixes applied"
-
-# --- Done ---
 print_success "\n✅ Full Dracula Hyprland setup complete! Reboot to apply all changes."
