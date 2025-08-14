@@ -49,7 +49,7 @@ print_header "Starting System-Level Setup"
 if [ "$CONFIRMATION" == "yes" ]; then
     read -p "Update system and install packages? Press Enter to continue..."
 fi
-# The PACKAGES array is defined just before it is used to ensure it's always in scope.
+# The PACKAGES array is defined here, just before it is used.
 PACKAGES=(
     git base-devel pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
@@ -57,14 +57,24 @@ PACKAGES=(
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
 )
-# The conditional check for an empty array was removed to avoid "unbound variable" errors.
-# The pacman command can handle an empty array, so the check is not necessary.
-if ! pacman -Syu "${PACKAGES[@]}" --noconfirm; then
-    print_error "Failed to install system packages."
+# We perform the system update first, and then install the packages.
+# This prevents potential errors with unbound variables when using the array.
+if ! pacman -Syu --noconfirm; then
+    print_error "Failed to update system."
     exit 1
 fi
-print_success "✅ System packages installed."
+print_success "✅ System updated."
 
+# Check if the PACKAGES array is not empty before attempting to install packages
+if [[ ${#PACKAGES[@]} -gt 0 ]]; then
+    if ! pacman -S "${PACKAGES[@]}" --noconfirm; then
+        print_error "Failed to install system packages."
+        exit 1
+    fi
+    print_success "✅ System packages installed."
+else
+    print_warning "No system packages to install. Skipping package installation."
+fi
 
 # Enable services
 if [ "$CONFIRMATION" == "yes" ]; then
