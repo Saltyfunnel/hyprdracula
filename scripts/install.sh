@@ -231,20 +231,31 @@ print_success "✅ Local asset files confirmed."
 # Extract and install Dracula GTK theme
 print_success "Installing Dracula GTK theme..."
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
+# Unzip and then find the extracted folder to rename it
 sudo -u "$USER_NAME" unzip "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR"
-sudo -u "$USER_NAME" mv "$THEMES_DIR/dracula-gtk-master" "$THEMES_DIR/Dracula"
-print_success "✅ Dracula GTK theme installed."
+# Find the directory that starts with 'gtk-master' and rename it
+EXTRACTED_GTK_DIR=$(sudo -u "$USER_NAME" find "$THEMES_DIR" -maxdepth 1 -type d -name "gtk-master*" -print -quit)
+if [ -n "$EXTRACTED_GTK_DIR" ]; then
+    sudo -u "$USER_NAME" mv "$EXTRACTED_GTK_DIR" "$THEMES_DIR/Dracula"
+    print_success "✅ Dracula GTK theme installed."
+else
+    print_warning "Could not find extracted GTK theme directory. Please check the name and move it manually."
+fi
+
 
 # Extract and install Dracula Icons
 print_success "Installing Dracula Icons..."
 sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
+# Unzip and then find the extracted folder to rename it
 sudo -u "$USER_NAME" unzip "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR"
-sudo -u "$USER_NAME" mv "$ICONS_DIR/icons-master" "$ICONS_DIR/Dracula"
-print_success "✅ Dracula Icons installed."
-
-
-# --- Clean up the temporary directory ---
-# Note: The temporary directory is no longer used, so this section is removed.
+# Find the directory that starts with 'icons-master' and rename it
+EXTRACTED_ICONS_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -type d -name "icons-master*" -print -quit)
+if [ -n "$EXTRACTED_ICONS_DIR" ]; then
+    sudo -u "$USER_NAME" mv "$EXTRACTED_ICONS_DIR" "$ICONS_DIR/Dracula"
+    print_success "✅ Dracula Icons installed."
+else
+    print_warning "Could not find extracted icons directory. Please check the name and move it manually."
+fi
 
 GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
 GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
