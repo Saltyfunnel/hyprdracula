@@ -33,7 +33,7 @@ copy_as_user() {
 run_command "pacman -S --noconfirm waybar" "Install Waybar" "yes"
 copy_as_user "$REPO_DIR/configs/waybar" "$CONFIG_DIR/waybar"
 
-run_command "yay -S --sudoloop --noconfirm tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship" "Install AUR utilities" "yes" "no"
+run_command "yay -S --sudoloop --noconfirm tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus" "Install AUR utilities" "yes" "no"
 
 copy_as_user "$REPO_DIR/configs/tofi" "$CONFIG_DIR/tofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
