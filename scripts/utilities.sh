@@ -38,38 +38,21 @@ run_command "yay -S --sudoloop --noconfirm tofi fastfetch swww hyprpicker hyprlo
 copy_as_user "$REPO_DIR/configs/tofi" "$CONFIG_DIR/tofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
 copy_as_user "$REPO_DIR/configs/hypr" "$CONFIG_DIR/hypr"
+copy_as_user "$REPO_DIR/configs/kitty" "$CONFIG_DIR/kitty"
 
-# --- Dracula Tofi Config Override ---
-sudo -u "$USER_NAME" mkdir -p "$CONFIG_DIR/tofi"
-cat << 'EOF' | sudo -u "$USER_NAME" tee "$CONFIG_DIR/tofi/config" >/dev/null
-# Dracula Tofi Config with transparency
-font = "JetBrainsMono Nerd Font:size=14"
-width = 60
-height = 200
-border-width = 2
-padding = 15
-corner-radius = 12
-background-color = rgba(40,42,54,0.85)
-border-color = #bd93f9
-text-color = #f8f8f2
-selection-color = #44475a
-selection-text-color = #f8f8f2
-prompt-color = #ff79c6
-EOF
-# ------------------------------------
-
-# Add fastfetch to bash only
-add_fastfetch_to_bash() {
-    local shell_rc="$USER_HOME/.bashrc"
+# Add fastfetch to bash
+add_fastfetch_to_shell() {
+    local shell_rc="$1"
+    local shell_rc_path="$USER_HOME/$shell_rc"
     local fastfetch_line='fastfetch --kitty-direct /home/'"$USER_NAME"'/.config/fastfetch/archkitty.png'
 
-    if [ -f "$shell_rc" ] && ! grep -qF "$fastfetch_line" "$shell_rc"; then
-        echo -e "\n# Run fastfetch on terminal start\n$fastfetch_line" >> "$shell_rc"
-        chown "$USER_NAME:$USER_NAME" "$shell_rc"
+    if [ -f "$shell_rc_path" ] && ! grep -qF "$fastfetch_line" "$shell_rc_path"; then
+        echo -e "\n# Run fastfetch on terminal start\n$fastfetch_line" >> "$shell_rc_path"
+        chown "$USER_NAME:$USER_NAME" "$shell_rc_path"
     fi
 }
 
-add_fastfetch_to_bash
+add_fastfetch_to_shell ".bashrc"
 
 run_command "pacman -S --noconfirm cliphist" "Install Cliphist" "yes"
 
@@ -84,18 +67,19 @@ if [ -f "$STARSHIP_SRC" ]; then
     chown "$USER_NAME:$USER_NAME" "$STARSHIP_DEST"
 fi
 
-# Add starship to bash only
-add_starship_to_bash() {
-    local shell_rc="$USER_HOME/.bashrc"
-    local starship_line='eval "$(starship init bash)"'
+add_starship_to_shell() {
+    local shell_rc="$1"
+    local shell_name="$2"
+    local shell_rc_path="$USER_HOME/$shell_rc"
+    local starship_line='eval "$(starship init '"$shell_name"')"' 
 
-    if [ -f "$shell_rc" ] && ! grep -qF "$starship_line" "$shell_rc"; then
-        echo -e "\n$starship_line" >> "$shell_rc"
-        chown "$USER_NAME:$USER_NAME" "$shell_rc"
+    if [ -f "$shell_rc_path" ] && ! grep -qF "$starship_line" "$shell_rc_path"; then
+        echo -e "\n$starship_line" >> "$shell_rc_path"
+        chown "$USER_NAME:$USER_NAME" "$shell_rc_path"
     fi
 }
 
-add_starship_to_bash
+add_starship_to_shell ".bashrc" "bash"
 
 # Papirus icons and folder coloring
 run_command "pacman -S --noconfirm papirus-icon-theme" "Install Papirus Icon Theme" "yes"
