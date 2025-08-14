@@ -127,7 +127,7 @@ fi
 declare -a AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus)
 # Check if the array is not empty before looping
 if [[ \${#AUR_PACKAGES[@]} -gt 0 ]]; then
-    for pkg in "\${AUR_PACKAGES[@]}"; do
+    for pkg in "\${AUR_PACKAGES[@]:-}"; do
         print_header "Install \$pkg via AUR"
         yay -S --noconfirm "\$pkg" || print_warning "Installation of \$pkg failed (non-fatal)."
     done
