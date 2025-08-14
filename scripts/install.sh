@@ -155,8 +155,7 @@ copy_configs() {
 # --- Copy configs ---
 print_header "Copying configuration files"
 copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
-# This line now copies your custom Tofi config from your assets folder.
-copy_configs "$SCRIPT_DIR/assets/tofi" "$CONFIG_DIR/tofi" "Tofi"
+copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
