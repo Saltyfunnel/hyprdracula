@@ -29,7 +29,8 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Define variables
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The script now correctly navigates up one directory to find the configs and assets.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 CONFIG_DIR="$USER_HOME/.config"
@@ -191,9 +192,9 @@ sudo -u "$USER_NAME" bash -c "
           echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
       fi
   }
-  add_fastfetch_to_shell \".bashrc\"
-  add_fastfetch_to_shell \".zshrc\"
-
+  add_fastfetch_to_shell \".bashrc\" \"bash\"
+  add_fastfetch_to_shell \".zshrc\" \"zsh\"
+  
   STARSHIP_SRC=\"$SCRIPT_DIR/configs/starship/starship.toml\"
   STARSHIP_DEST=\"$CONFIG_DIR/starship.toml\"
   if [ -f \"\$STARSHIP_SRC\" ]; then
