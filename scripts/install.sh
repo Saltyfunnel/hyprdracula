@@ -242,23 +242,36 @@ if [ ! -f "$ASSETS_DIR/Dracula.zip" ]; then
 fi
 print_success "✅ Local asset files confirmed."
 
+# Corrected GTK theme installation logic
 print_success "Installing Dracula GTK theme..."
+# Clean up any previous install to prevent overwrite errors
+sudo -u "$USER_NAME" rm -rf "$THEMES_DIR/dracula-gtk" "$THEMES_DIR/dracula-gtk-master"
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
 sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null
-if [ -d "$THEMES_DIR/gtk-master" ]; then
-    sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/dracula-gtk"
+
+# Find the unzipped folder and rename it correctly
+UNZIPPED_GTK_DIR=$(sudo -u "$USER_NAME" find "$THEMES_DIR" -maxdepth 1 -mindepth 1 -type d -name "*dracula-gtk*" | head -n 1)
+if [ -n "$UNZIPPED_GTK_DIR" ] && [ "$(basename "$UNZIPPED_GTK_DIR")" != "dracula-gtk" ]; then
+    print_success "Renaming '$(basename "$UNZIPPED_GTK_DIR")' to 'dracula-gtk'..."
+    if ! sudo -u "$USER_NAME" mv "$UNZIPPED_GTK_DIR" "$THEMES_DIR/dracula-gtk"; then
+        print_warning "Failed to rename GTK theme folder. Theme may not appear correctly."
+    else
+        print_success "✅ GTK theme folder renamed to dracula-gtk."
+    fi
 fi
 print_success "✅ Dracula GTK theme installed."
 
+# Corrected Icons installation logic
 print_success "Installing Dracula Icons..."
+# Clean up any previous install to prevent overwrite errors
+sudo -u "$USER_NAME" rm -rf "$ICONS_DIR/Dracula" "$ICONS_DIR/Dracula-*"
 sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
 sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null
 
-# --- Revised section to handle icon folder name variations ---
-# Find the actual directory created by unzip and rename it to 'Dracula' if it's different.
-ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" -not -name "Dracula" | head -n 1)
-if [ -n "$ACTUAL_ICON_DIR" ]; then
-    print_success "Renaming '$ACTUAL_ICON_DIR' to '$ICONS_DIR/Dracula'..."
+# Find the unzipped folder and rename it correctly
+ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
+if [ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ]; then
+    print_success "Renaming '$(basename "$ACTUAL_ICON_DIR")' to '$ICONS_DIR/Dracula'..."
     if ! sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"; then
         print_warning "Failed to rename icon folder. Icons may not appear correctly."
     else
@@ -266,7 +279,6 @@ if [ -n "$ACTUAL_ICON_DIR" ]; then
     fi
 fi
 print_success "✅ Dracula Icons installed."
-# --- End of revised section ---
 
 # --- The key addition: Update the icon cache to ensure icons are found by applications like Thunar. ---
 if command -v gtk-update-icon-cache &>/dev/null; then
