@@ -1,4 +1,4 @@
-# Hyprdrac
+# Hyprdracula
 
 > *My personal Hyprland setup, handcrafted through a fog of confusion, bad decisions, and AI-enabled incompetence.*
 
