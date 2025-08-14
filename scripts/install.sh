@@ -67,7 +67,8 @@ print_success "✅ System updated."
 
 # Check if the PACKAGES array is not empty before attempting to install packages
 if [[ ${#PACKAGES[@]} -gt 0 ]]; then
-    if ! pacman -S "${PACKAGES[@]}" --noconfirm; then
+    # Using "${PACKAGES[@]:-}" to prevent unbound variable errors with empty arrays
+    if ! pacman -S "${PACKAGES[@]:-}" --noconfirm; then
         print_error "Failed to install system packages."
         exit 1
     fi
