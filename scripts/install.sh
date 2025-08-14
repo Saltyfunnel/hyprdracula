@@ -119,66 +119,87 @@ fi
 print_header "Copying configuration files"
 
 # Copy Waybar configs
-if [ -d "$SCRIPT_DIR/configs/waybar" ]; then
-    sudo -u "$USER_NAME" mkdir -p "$CONFIG_DIR/waybar"
-    sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/configs/waybar"/* "$CONFIG_DIR/waybar"
+SOURCE_DIR="$SCRIPT_DIR/configs/waybar"
+DEST_DIR="$CONFIG_DIR/waybar"
+if [ -d "$SOURCE_DIR" ]; then
+    print_success "Copying Waybar configs from '$SOURCE_DIR' to '$DEST_DIR'."
+    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
+    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
     print_success "✅ Copied Waybar configs."
 else
-    print_warning "Source directory not found: $SCRIPT_DIR/configs/waybar. Skipping."
+    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
 fi
 
 # Copy Tofi configs
-if [ -d "$SCRIPT_DIR/configs/tofi" ]; then
-    sudo -u "$USER_NAME" mkdir -p "$CONFIG_DIR/tofi"
-    sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/configs/tofi"/* "$CONFIG_DIR/tofi"
+SOURCE_DIR="$SCRIPT_DIR/configs/tofi"
+DEST_DIR="$CONFIG_DIR/tofi"
+if [ -d "$SOURCE_DIR" ]; then
+    print_success "Copying Tofi configs from '$SOURCE_DIR' to '$DEST_DIR'."
+    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
+    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
     print_success "✅ Copied Tofi configs."
 else
-    print_warning "Source directory not found: $SCRIPT_DIR/configs/tofi. Skipping."
+    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
 fi
 
 # Copy Fastfetch configs
-if [ -d "$SCRIPT_DIR/configs/fastfetch" ]; then
-    sudo -u "$USER_NAME" mkdir -p "$CONFIG_DIR/fastfetch"
-    sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/configs/fastfetch"/* "$CONFIG_DIR/fastfetch"
+SOURCE_DIR="$SCRIPT_DIR/configs/fastfetch"
+DEST_DIR="$CONFIG_DIR/fastfetch"
+if [ -d "$SOURCE_DIR" ]; then
+    print_success "Copying Fastfetch configs from '$SOURCE_DIR' to '$DEST_DIR'."
+    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
+    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
     print_success "✅ Copied Fastfetch configs."
 else
-    print_warning "Source directory not found: $SCRIPT_DIR/configs/fastfetch. Skipping."
+    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
 fi
 
 # Copy Hypr configs
-if [ -d "$SCRIPT_DIR/configs/hypr" ]; then
-    sudo -u "$USER_NAME" mkdir -p "$CONFIG_DIR/hypr"
-    sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/configs/hypr"/* "$CONFIG_DIR/hypr"
+SOURCE_DIR="$SCRIPT_DIR/configs/hypr"
+DEST_DIR="$CONFIG_DIR/hypr"
+if [ -d "$SOURCE_DIR" ]; then
+    print_success "Copying Hypr configs from '$SOURCE_DIR' to '$DEST_DIR'."
+    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
+    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
     print_success "✅ Copied Hypr configs."
 else
-    print_warning "Source directory not found: $SCRIPT_DIR/configs/hypr. Skipping."
+    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
 fi
 
 # Copy Kitty configs
-if [ -d "$SCRIPT_DIR/configs/kitty" ]; then
-    sudo -u "$USER_NAME" mkdir -p "$CONFIG_DIR/kitty"
-    sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/configs/kitty"/* "$CONFIG_DIR/kitty"
+SOURCE_DIR="$SCRIPT_DIR/configs/kitty"
+DEST_DIR="$CONFIG_DIR/kitty"
+if [ -d "$SOURCE_DIR" ]; then
+    print_success "Copying Kitty configs from '$SOURCE_DIR' to '$DEST_DIR'."
+    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
+    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
     print_success "✅ Copied Kitty configs."
 else
-    print_warning "Source directory not found: $SCRIPT_DIR/configs/kitty. Skipping."
+    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
 fi
 
 # Copy Dunst configs
-if [ -d "$SCRIPT_DIR/configs/dunst" ]; then
-    sudo -u "$USER_NAME" mkdir -p "$CONFIG_DIR/dunst"
-    sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/configs/dunst"/* "$CONFIG_DIR/dunst"
+SOURCE_DIR="$SCRIPT_DIR/configs/dunst"
+DEST_DIR="$CONFIG_DIR/dunst"
+if [ -d "$SOURCE_DIR" ]; then
+    print_success "Copying Dunst configs from '$SOURCE_DIR' to '$DEST_DIR'."
+    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
+    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
     print_success "✅ Copied Dunst configs."
 else
-    print_warning "Source directory not found: $SCRIPT_DIR/configs/dunst. Skipping."
+    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
 fi
 
 # Copy assets and backgrounds
-if [ -d "$SCRIPT_DIR/assets/backgrounds" ]; then
-    sudo -u "$USER_NAME" mkdir -p "$CONFIG_DIR/assets/backgrounds"
-    sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/assets/backgrounds"/* "$CONFIG_DIR/assets/backgrounds"
+SOURCE_DIR="$SCRIPT_DIR/assets/backgrounds"
+DEST_DIR="$CONFIG_DIR/assets/backgrounds"
+if [ -d "$SOURCE_DIR" ]; then
+    print_success "Copying backgrounds from '$SOURCE_DIR' to '$DEST_DIR'."
+    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
+    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
     print_success "✅ Copied assets and backgrounds."
 else
-    print_warning "Source directory not found: $SCRIPT_DIR/assets/backgrounds. Skipping."
+    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
 fi
 
 # --- Dracula Tofi Config Override ---
