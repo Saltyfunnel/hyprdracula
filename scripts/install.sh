@@ -53,9 +53,9 @@ print_header "Starting Full Dracula Hyprland Setup"
 
 # --- System packages ---
 PACKAGES=(
-    git base-devel pipewire wireplumber pamixer brightnessctl
+    git base-devel yay pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
-    sddm kitty nano tar gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
+    sddm kitty nano tar gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
 )
@@ -118,6 +118,10 @@ add_starship_to_shell ".bashrc" "bash"
 add_starship_to_shell ".zshrc" "zsh"
 
 # --- GTK Dracula theme ---
+if ! pacman -Qs dracula-gtk-theme &>/dev/null && ! yay -Qs dracula-gtk-theme &>/dev/null; then
+    run_command "yay -S --noconfirm dracula-gtk-theme" "Install Dracula GTK theme" "yes" "no"
+fi
+
 GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
 GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
 mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
@@ -130,8 +134,19 @@ gtk-font-name=JetBrainsMono 10"
 echo "$GTK_SETTINGS" | sudo -u "$USER_NAME" tee "$GTK3_CONFIG/settings.ini" "$GTK4_CONFIG/settings.ini" >/dev/null
 chown -R "$USER_NAME:$USER_NAME" "$GTK3_CONFIG" "$GTK4_CONFIG"
 
+# --- Export GTK env variables for Hyprland session ---
+PROFILE_ENV="$CONFIG_DIR/session.env"
+echo "export XDG_CONFIG_DIRS=\$HOME/.config:/etc/xdg" | sudo -u "$USER_NAME" tee -a "$PROFILE_ENV" >/dev/null
+echo "export XDG_DATA_DIRS=\$HOME/.local/share:/usr/local/share:/usr/share" | sudo -u "$USER_NAME" tee -a "$PROFILE_ENV" >/dev/null
+chown "$USER_NAME:$USER_NAME" "$PROFILE_ENV"
+
+# --- Apply immediately (for current session) ---
 sudo -u "$USER_NAME" dbus-launch gsettings set org.gnome.desktop.interface gtk-theme 'Dracula'
 sudo -u "$USER_NAME" dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'Dracula'
+
+# --- Restart Thunar to pick up theme ---
+sudo -u "$USER_NAME" thunar -q
+sudo -u "$USER_NAME" thunar &
 
 # --- Thunar Kitty custom action ---
 UCA_DIR="$CONFIG_DIR/Thunar"
