@@ -238,13 +238,13 @@ print_success "✅ Dracula GTK theme installed."
 
 # Download and extract Dracula Icons
 print_success "Downloading Dracula Icons..."
-ICONS_URL="https://github.com/dracula/dracula-icons/archive/refs/heads/main.tar.gz"
+ICONS_URL="https://github.com/dracula/icons/archive/refs/heads/master.tar.gz"
 if ! sudo -u "$USER_NAME" curl -L -o "$TEMP_DIR/icons.tar.gz" "$ICONS_URL"; then
     print_error "Failed to download Dracula Icons."
 fi
 sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
 sudo -u "$USER_NAME" tar -xzf "$TEMP_DIR/icons.tar.gz" -C "$ICONS_DIR"
-sudo -u "$USER_NAME" mv "$ICONS_DIR/dracula-icons-main" "$ICONS_DIR/Dracula"
+sudo -u "$USER_NAME" mv "$ICONS_DIR/icons-master" "$ICONS_DIR/Dracula"
 print_success "✅ Dracula Icons installed."
 
 # Clean up the temporary directory
