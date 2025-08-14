@@ -24,42 +24,42 @@ copy_as_user() {
         return 1
     fi
 
-    run_command "mkdir -p \"$dest\"" "Create destination directory $dest" "no" "no"
-    run_command "cp -r \"$src\"/* \"$dest\"" "Copy from $src to $dest" "yes" "no"
-    run_command "chown -R $USER_NAME:$USER_NAME \"$dest\"" "Fix ownership for $dest" "no" "yes"
+    mkdir -p "$dest"
+    cp -r "$src"/* "$dest"
+    chown -R "$USER_NAME:$USER_NAME" "$dest"
 }
 
-# --- Pacman utilities ---
-run_command "pacman -S --noconfirm waybar cliphist" "Install core utilities" "yes"
-
-# --- AUR utilities (non-interactive) ---
-export YAY_BATCH=1
-run_command "yay -S --noconfirm --needed tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus" "Install AUR utilities" "yes" "no"
-
-# --- Config copy ---
+# --- Install core utilities ---
+pacman -S --noconfirm waybar
 copy_as_user "$REPO_DIR/configs/waybar" "$CONFIG_DIR/waybar"
+
+yay -S --noconfirm tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus
+
 copy_as_user "$REPO_DIR/configs/tofi" "$CONFIG_DIR/tofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
 copy_as_user "$REPO_DIR/configs/hypr" "$CONFIG_DIR/hypr"
 copy_as_user "$REPO_DIR/configs/kitty" "$CONFIG_DIR/kitty"
 copy_as_user "$REPO_DIR/configs/dunst" "$CONFIG_DIR/dunst"
 
-# --- Fastfetch shell integration ---
+# --- Add fastfetch to shell ---
 add_fastfetch_to_shell() {
     local shell_rc="$1"
     local shell_rc_path="$USER_HOME/$shell_rc"
-    local fastfetch_line='fastfetch --kitty-direct /home/'"$USER_NAME"'/.config/fastfetch/archkitty.png'
+    local fastfetch_line="fastfetch --kitty-direct $CONFIG_DIR/fastfetch/archkitty.png"
 
     if [ -f "$shell_rc_path" ] && ! grep -qF "$fastfetch_line" "$shell_rc_path"; then
         echo -e "\n# Run fastfetch on terminal start\n$fastfetch_line" >> "$shell_rc_path"
         chown "$USER_NAME:$USER_NAME" "$shell_rc_path"
     fi
 }
-add_fastfetch_to_shell ".bashrc"
 
-# --- Starship shell integration ---
+add_fastfetch_to_shell ".bashrc"
+add_fastfetch_to_shell ".zshrc"
+
+# --- Starship config ---
 STARSHIP_SRC="$REPO_DIR/configs/starship/starship.toml"
 STARSHIP_DEST="$CONFIG_DIR/starship.toml"
+
 if [ -f "$STARSHIP_SRC" ]; then
     cp "$STARSHIP_SRC" "$STARSHIP_DEST"
     chown "$USER_NAME:$USER_NAME" "$STARSHIP_DEST"
@@ -69,28 +69,63 @@ add_starship_to_shell() {
     local shell_rc="$1"
     local shell_name="$2"
     local shell_rc_path="$USER_HOME/$shell_rc"
-    local starship_line='eval "$(starship init '"$shell_name"')"' 
+    local starship_line="eval \"\$(starship init $shell_name)\""
 
     if [ -f "$shell_rc_path" ] && ! grep -qF "$starship_line" "$shell_rc_path"; then
         echo -e "\n$starship_line" >> "$shell_rc_path"
         chown "$USER_NAME:$USER_NAME" "$shell_rc_path"
     fi
 }
-add_starship_to_shell ".bashrc" "bash"
 
-# --- Assets ---
+add_starship_to_shell ".bashrc" "bash"
+add_starship_to_shell ".zshrc" "zsh"
+
+# --- Install additional utilities ---
+pacman -S --noconfirm cliphist
 copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
+
+# --- Dracula GTK Theme ---
+GTK3_CONFIG_DIR="$CONFIG_DIR/gtk-3.0"
+GTK4_CONFIG_DIR="$CONFIG_DIR/gtk-4.0"
+THEME_REPO="$USER_HOME/Dracula-gtk-theme"
+
+if [ ! -d "$THEME_REPO" ]; then
+    git clone https://github.com/dracula/gtk.git "$THEME_REPO"
+fi
+
+mkdir -p "$USER_HOME/.themes"
+cp -r "$THEME_REPO"/* "$USER_HOME/.themes/"
+chown -R "$USER_NAME:$USER_NAME" "$USER_HOME/.themes"
+
+# Apply Dracula GTK theme
+mkdir -p "$GTK3_CONFIG_DIR" "$GTK4_CONFIG_DIR"
+
+cat > "$GTK3_CONFIG_DIR/settings.ini" << EOF
+[Settings]
+gtk-theme-name=Dracula
+gtk-icon-theme-name=Papirus-Dark
+gtk-font-name=JetBrains Mono 11
+EOF
+
+cat > "$GTK4_CONFIG_DIR/settings.ini" << EOF
+[Settings]
+gtk-theme-name=Dracula
+gtk-icon-theme-name=Papirus-Dark
+gtk-font-name=JetBrains Mono 11
+EOF
+
+chown -R "$USER_NAME:$USER_NAME" "$GTK3_CONFIG_DIR" "$GTK4_CONFIG_DIR"
 
 # --- Thunar Kitty custom action ---
 setup_thunar_kitty_action() {
-  local uca_dir="$CONFIG_DIR/Thunar"
-  local uca_file="$uca_dir/uca.xml"
+    local uca_dir="$CONFIG_DIR/Thunar"
+    local uca_file="$uca_dir/uca.xml"
 
-  mkdir -p "$uca_dir"
-  chown "$USER_NAME:$USER_NAME" "$uca_dir"
-  chmod 700 "$uca_dir"
+    mkdir -p "$uca_dir"
+    chown "$USER_NAME:$USER_NAME" "$uca_dir"
+    chmod 700 "$uca_dir"
 
-  local kitty_action_xml='
+    local kitty_action_xml='
   <action>
     <icon>utilities-terminal</icon>
     <name>Open Kitty Here</name>
@@ -101,23 +136,24 @@ setup_thunar_kitty_action() {
     <startup_notify>true</startup_notify>
   </action>'
 
-  if [ ! -f "$uca_file" ]; then
-    cat > "$uca_file" << EOF
+    if [ ! -f "$uca_file" ]; then
+        cat > "$uca_file" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <actions>
 $kitty_action_xml
 </actions>
 EOF
-    chown "$USER_NAME:$USER_NAME" "$uca_file"
-  else
-    if ! grep -q "<name>Open Kitty Here</name>" "$uca_file"; then
-      sed -i "/<\/actions>/ i\\
+        chown "$USER_NAME:$USER_NAME" "$uca_file"
+    else
+        if ! grep -q "<name>Open Kitty Here</name>" "$uca_file"; then
+            sed -i "/<\/actions>/ i\\
 $kitty_action_xml
 " "$uca_file"
-      chown "$USER_NAME:$USER_NAME" "$uca_file"
+            chown "$USER_NAME:$USER_NAME" "$uca_file"
+        fi
     fi
-  fi
 }
+
 setup_thunar_kitty_action
 
 print_success "\nUtilities setup complete!"
