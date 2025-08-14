@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+# --- Variables ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(eval echo "~$USER_NAME")"
@@ -11,7 +12,7 @@ ASSETS_DEST="$CONFIG_DIR/assets"
 
 source "$SCRIPT_DIR/helper.sh"
 
-# --- Helpers ---
+# --- Helper Functions ---
 copy_as_user() {
     local src="$1"
     local dest="$2"
@@ -45,13 +46,13 @@ add_starship_to_shell() {
     fi
 }
 
-# --- Root checks ---
+# --- Root Checks ---
 check_root
 check_os
 
-print_header "Starting Full Dracula Hyprland Setup"
+print_header "🚀 Starting Full Dracula Hyprland Setup"
 
-# --- System packages ---
+# --- System Packages ---
 PACKAGES=(
     git base-devel yay pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
@@ -62,7 +63,7 @@ PACKAGES=(
 run_command "pacman -Syu --noconfirm" "Update system packages" "yes"
 run_command "pacman -S --noconfirm ${PACKAGES[*]}" "Install system packages" "yes"
 
-# --- Enable services ---
+# --- Enable Services ---
 run_command "systemctl enable --now polkit.service" "Enable polkit" "yes"
 run_command "systemctl enable sddm.service" "Enable SDDM" "yes"
 
@@ -74,13 +75,13 @@ if ! command -v yay &>/dev/null; then
     run_command "rm -rf /tmp/yay" "Clean yay temp" "no" "no"
 fi
 
-# --- AUR utilities ---
+# --- AUR Utilities ---
 AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus)
 for pkg in "${AUR_PACKAGES[@]}"; do
     run_command "yay -S --noconfirm $pkg" "Install $pkg via AUR" "yes" "no"
 done
 
-# --- Copy configs ---
+# --- Copy Configs ---
 copy_as_user "$REPO_DIR/configs/waybar" "$CONFIG_DIR/waybar"
 copy_as_user "$REPO_DIR/configs/tofi" "$CONFIG_DIR/tofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
@@ -89,7 +90,7 @@ copy_as_user "$REPO_DIR/configs/kitty" "$CONFIG_DIR/kitty"
 copy_as_user "$REPO_DIR/configs/dunst" "$CONFIG_DIR/dunst"
 copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
 
-# --- Dracula Tofi Config Override ---
+# --- Dracula Tofi Config ---
 sudo -u "$USER_NAME" tee "$CONFIG_DIR/tofi/config" >/dev/null <<'EOF'
 font = "JetBrainsMono Nerd Font:size=14"
 width = 60
@@ -105,7 +106,7 @@ selection-text-color = #f8f8f2
 prompt-color = #ff79c6
 EOF
 
-# --- Fastfetch & Starship shell integration ---
+# --- Fastfetch & Starship ---
 add_fastfetch_to_shell ".bashrc"
 add_fastfetch_to_shell ".zshrc"
 STARSHIP_SRC="$REPO_DIR/configs/starship/starship.toml"
@@ -117,11 +118,7 @@ fi
 add_starship_to_shell ".bashrc" "bash"
 add_starship_to_shell ".zshrc" "zsh"
 
-# --- GTK Dracula theme ---
-if ! pacman -Qs dracula-gtk-theme &>/dev/null && ! yay -Qs dracula-gtk-theme &>/dev/null; then
-    run_command "yay -S --noconfirm dracula-gtk-theme" "Install Dracula GTK theme" "yes" "no"
-fi
-
+# --- GTK Dracula Theme ---
 GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
 GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
 mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
@@ -134,21 +131,10 @@ gtk-font-name=JetBrainsMono 10"
 echo "$GTK_SETTINGS" | sudo -u "$USER_NAME" tee "$GTK3_CONFIG/settings.ini" "$GTK4_CONFIG/settings.ini" >/dev/null
 chown -R "$USER_NAME:$USER_NAME" "$GTK3_CONFIG" "$GTK4_CONFIG"
 
-# --- Export GTK env variables for Hyprland session ---
-PROFILE_ENV="$CONFIG_DIR/session.env"
-echo "export XDG_CONFIG_DIRS=\$HOME/.config:/etc/xdg" | sudo -u "$USER_NAME" tee -a "$PROFILE_ENV" >/dev/null
-echo "export XDG_DATA_DIRS=\$HOME/.local/share:/usr/local/share:/usr/share" | sudo -u "$USER_NAME" tee -a "$PROFILE_ENV" >/dev/null
-chown "$USER_NAME:$USER_NAME" "$PROFILE_ENV"
-
-# --- Apply immediately (for current session) ---
 sudo -u "$USER_NAME" dbus-launch gsettings set org.gnome.desktop.interface gtk-theme 'Dracula'
 sudo -u "$USER_NAME" dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'Dracula'
 
-# --- Restart Thunar to pick up theme ---
-sudo -u "$USER_NAME" thunar -q
-sudo -u "$USER_NAME" thunar &
-
-# --- Thunar Kitty custom action ---
+# --- Thunar Kitty Custom Action ---
 UCA_DIR="$CONFIG_DIR/Thunar"
 UCA_FILE="$UCA_DIR/uca.xml"
 mkdir -p "$UCA_DIR"
@@ -173,4 +159,13 @@ EOF
     chown "$USER_NAME:$USER_NAME" "$UCA_FILE"
 fi
 
+# --- GTK & Thunar Theme Fix ---
+print_header "Applying GTK and Thunar theme fixes"
+sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$USER_HOME/.local/share/icons/Dracula" || true
+sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "/usr/share/icons/Dracula" || true
+pkill -x thunar || true
+sudo -u "$USER_NAME" thunar --daemon &
+print_success "✅ GTK and Thunar theme fixes applied"
+
+# --- Done ---
 print_success "\n✅ Full Dracula Hyprland setup complete! Reboot to apply all changes."
