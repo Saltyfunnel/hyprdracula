@@ -21,6 +21,26 @@ print_error() {
     exit 1
 }
 
+print_bold_blue() {
+    echo -e "\e[1m\e[34m$1\e[0m"
+}
+
+run_command() {
+    local command="$1"
+    local description="$2"
+    local confirm_needed="${3:-"yes"}"
+
+    if [ "$confirm_needed" == "yes" ] && [ "$CONFIRMATION" == "yes" ]; then
+        read -p "Install '$description'? Press Enter to continue..."
+    fi
+
+    echo -e "\nRunning: $command"
+    if ! eval "$command"; then
+        print_error "Failed to '$description'."
+    fi
+    print_success "✅ Success: '$description'"
+}
+
 # --- Main Execution Logic ---
 
 # Check if the script is run as root
@@ -29,7 +49,6 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Define variables
-# The script now correctly navigates up one directory to find the configs.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
@@ -46,14 +65,12 @@ fi
 # --- Pre-run checks ---
 print_header "Running Pre-run Checks"
 
-# Check for required directories in the script's location
 if [ ! -d "$SCRIPT_DIR/configs" ]; then
     print_error "Required 'configs' directory not found in the script's directory: $SCRIPT_DIR.
     Please ensure the entire repository is cloned and you are running the script from its root directory."
 fi
 print_success "✅ File structure confirmed."
 
-# Check for necessary tools before proceeding
 if ! command -v git &>/dev/null; then
     print_error "git is not installed. Please install it with 'sudo pacman -S git'."
 fi
@@ -69,21 +86,43 @@ print_header "Starting System-Level Setup"
 if [ "$CONFIRMATION" == "yes" ]; then
     read -p "Update system and install packages? Press Enter to continue..."
 fi
-# The PACKAGES array is defined here, just before it is used.
 PACKAGES=(
     git base-devel pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
-    sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
+    sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
     waybar
 )
-# We perform the system update and package installation in a single command.
-# Using "${PACKAGES[@]:-}" prevents unbound variable errors with empty arrays.
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
 fi
 print_success "✅ System updated and packages installed."
+
+# --- GPU Driver Installation ---
+print_header "Installing GPU Drivers"
+GPU_INFO=$(lspci | grep -Ei "VGA|3D")
+
+if echo "$GPU_INFO" | grep -qi "nvidia"; then
+    print_bold_blue "NVIDIA GPU detected."
+    run_command "pacman -S --noconfirm nvidia nvidia-utils nvidia-settings" "Install NVIDIA drivers"
+elif echo "$GPU_INFO" | grep -qi "amd"; then
+    print_bold_blue "AMD GPU detected."
+    run_command "pacman -S --noconfirm xf86-video-amdgpu vulkan-radeon libva-mesa-driver mesa-vdpau" "Install AMD drivers"
+elif echo "$GPU_INFO" | grep -qi "intel"; then
+    print_bold_blue "Intel GPU detected."
+    run_command "pacman -S --noconfirm mesa libva-intel-driver intel-media-driver vulkan-intel" "Install Intel drivers"
+else
+    print_warning "No supported GPU detected. Info: $GPU_INFO"
+    if [ "$CONFIRMATION" == "yes" ]; then
+        read -p "Try installing NVIDIA drivers anyway? [Y/n]: " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            run_command "pacman -S --noconfirm nvidia nvidia-utils nvidia-settings" "Install NVIDIA drivers (forced)"
+        fi
+    fi
+fi
+print_success "✅ GPU driver installation complete."
 
 # Enable services
 if [ "$CONFIRMATION" == "yes" ]; then
@@ -98,7 +137,6 @@ print_success "\n✅ System-level setup is complete! Now starting user-level set
 # --- User-level tasks (executed as the user via sudo) ---
 print_header "Starting User-Level Setup"
 
-# --- Install yay if missing ---
 if ! sudo -u "$USER_NAME" command -v yay &>/dev/null; then
     print_header "Installing yay from AUR"
     if sudo -u "$USER_NAME" bash -c '
@@ -120,9 +158,7 @@ else
     print_header "yay is already installed."
 fi
 
-# --- AUR utilities ---
 declare -a AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus)
-# Install all AUR packages at once to avoid unbound variable issues with loops.
 if [[ "${#AUR_PACKAGES[@]}" -gt 0 ]]; then
     print_header "Installing AUR packages..."
     if ! sudo -u "$USER_NAME" yay -S --noconfirm "${AUR_PACKAGES[@]}"; then
@@ -134,7 +170,6 @@ else
     print_warning "No AUR packages to install. Skipping package installation."
 fi
 
-# --- File Copying Function ---
 copy_configs() {
     local source_dir="$1"
     local dest_dir="$2"
@@ -153,7 +188,6 @@ copy_configs() {
     return 0
 }
 
-# --- Copy configs ---
 print_header "Copying configuration files"
 copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
 copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
@@ -162,7 +196,6 @@ copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 
-# --- Fastfetch & Starship shell integration ---
 print_header "Setting up Fastfetch and Starship"
 sudo -u "$USER_NAME" bash -c "
   add_fastfetch_to_shell() {
@@ -195,13 +228,11 @@ sudo -u "$USER_NAME" bash -c "
 "
 print_success "✅ Shell integrations complete."
 
-# --- GTK Dracula theme and icon setup ---
 print_header "Setting up GTK themes and icons from local zip files"
 THEMES_DIR="$USER_HOME/.themes"
 ICONS_DIR="$USER_HOME/.icons"
 ASSETS_DIR="$SCRIPT_DIR/assets"
 
-# Check if the asset files exist locally
 if [ ! -f "$ASSETS_DIR/dracula-gtk-master.zip" ]; then
     print_error "Dracula GTK theme archive not found at $ASSETS_DIR/dracula-gtk-master.zip. Please download it and place it there."
 fi
@@ -210,17 +241,14 @@ if [ ! -f "$ASSETS_DIR/Dracula.zip" ]; then
 fi
 print_success "✅ Local asset files confirmed."
 
-# Extract and install Dracula GTK theme
 print_success "Installing Dracula GTK theme..."
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
 sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null
-# The unzipped folder is named 'gtk-master'. We rename it for consistency.
 if [ -d "$THEMES_DIR/gtk-master" ]; then
     sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/dracula-gtk"
 fi
 print_success "✅ Dracula GTK theme installed."
 
-# Extract and install Dracula Icons
 print_success "Installing Dracula Icons..."
 sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
 sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null
@@ -230,11 +258,9 @@ GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
 GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
 sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
 
-# Write to settings.ini for applications that read it directly
 GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10"
 sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
 
-# Use gsettings to apply the themes, as this is the standard for many GTK applications
 if command -v gsettings &>/dev/null; then
     print_success "Using gsettings to apply GTK themes."
     sudo -u "$USER_NAME" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
@@ -253,7 +279,6 @@ env = ICON_THEME,Dracula
 env = XDG_CURRENT_DESKTOP,Hyprland
 EOF_HYPR_VARS
 
-# Source the new config file in the main Hyprland config
 HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
 if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; then
     sudo -u "$USER_NAME" echo -e "\n# Sourced by the setup script to set GTK and icon themes\nsource = $HYPR_VARS_FILE" >> "$HYPR_CONF"
@@ -261,7 +286,6 @@ fi
 
 print_success "✅ GTK themes and icons configured for Hyprland."
 
-# --- Wallpaper setup ---
 print_header "Creating backgrounds directory"
 WALLPAPER_SRC="$SCRIPT_DIR/assets/backgrounds"
 WALLPAPER_DEST="$CONFIG_DIR/assets/backgrounds"
@@ -277,7 +301,6 @@ sudo -u "$USER_NAME" mkdir -p "$WALLPAPER_DEST"
 sudo -u "$USER_NAME" cp -r "$WALLPAPER_SRC/." "$WALLPAPER_DEST"
 print_success "✅ Wallpapers copied to $WALLPAPER_DEST."
 
-# --- Thunar Kitty custom action ---
 print_header "Setting up Thunar custom action"
 UCA_DIR="$CONFIG_DIR/Thunar"
 UCA_FILE="$UCA_DIR/uca.xml"
@@ -302,7 +325,6 @@ EOF_UCA
 fi
 print_success "✅ Thunar action configured."
 
-# --- Restart Thunar to apply theme ---
 sudo -u "$USER_NAME" pkill thunar || true
 sudo -u "$USER_NAME" thunar &
 print_success "✅ Thunar restarted."
