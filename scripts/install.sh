@@ -3,7 +3,7 @@
 # This script handles both system-level and user-level tasks in a single run.
 set -euo pipefail
 
-# --- Helper Functions ---
+# --- Global Helper Functions ---
 print_header() {
     echo -e "\n--- \e[1m\e[34m$1\e[0m ---"
 }
@@ -32,6 +32,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
+CONFIG_DIR="$USER_HOME/.config"
 CONFIRMATION="yes"
 
 if [[ $# -eq 1 && "$1" == "--noconfirm" ]]; then
@@ -72,9 +73,17 @@ print_success "✅ System services enabled."
 print_success "\n✅ System-level setup is complete! Now starting user-level setup."
 
 # --- User-level tasks (executed as the user) ---
-# Use a here document (EOF block) to run all commands as the non-root user
+# Use a here document (EOF block) to run all commands as the non-root user.
+# Variables are explicitly exported to the subshell to ensure they are available.
+export SCRIPT_DIR
+export USER_HOME
+export CONFIG_DIR
+export REPO_DIR="$SCRIPT_DIR"
+
 sudo -u "$USER_NAME" bash <<EOF
 set -euo pipefail
+
+# --- Helper Functions for subshell ---
 print_header() {
     echo -e "\n--- \e[1m\e[34m$1\e[0m ---"
 }
@@ -87,13 +96,6 @@ print_warning() {
 print_error() {
     echo -e "\e[31mError: $1\e[0m" >&2
 }
-
-# Variables for the user's environment
-REPO_DIR="$SCRIPT_DIR"
-USER_HOME="\$(getent passwd "\$USER" | cut -d: -f6)"
-CONFIG_DIR="\$USER_HOME/.config"
-
-print_header "Starting User-Level Setup"
 
 # --- Install yay if missing ---
 if ! command -v yay &>/dev/null; then
