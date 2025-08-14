@@ -30,7 +30,7 @@ print_success() {
 }
 
 print_warning() {
-    echo -e "\e[33mWarning: $1\e[0m"
+    echo -e "\e[33mWarning: $1\e[0m" >&2
 }
 
 print_error() {
@@ -51,7 +51,7 @@ run_command() {
     fi
 
     if [ "$is_sudo" == "yes" ]; then
-        if sudo bash -c "$cmd"; then
+        if bash -c "$cmd"; then
             print_success "✅ Success: $desc"
         elif [ "$handle_error" == "yes" ]; then
             print_error "❌ Failed: $desc"
@@ -60,6 +60,7 @@ run_command() {
             print_warning "⚠️ Failed (non-fatal): $desc"
         fi
     else
+        # When called as a user, we run the command directly
         if bash -c "$cmd"; then
             print_success "✅ Success: $desc"
         elif [ "$handle_error" == "yes" ]; then
@@ -70,6 +71,7 @@ run_command() {
         fi
     fi
 }
+
 
 # --- System-level tasks (run as root) ---
 run_system_setup() {
@@ -113,7 +115,6 @@ run_user_setup() {
         print_header "Installing yay from AUR"
         if bash -c "
             set -e
-            # Create a temporary directory in the user's home
             YAY_TEMP_DIR=\"\$(mktemp -d -p \"\$HOME\")\"
             cd \"\$YAY_TEMP_DIR\"
             
@@ -121,7 +122,6 @@ run_user_setup() {
             cd yay
             makepkg -si --noconfirm
             
-            # Clean up the temporary directory
             rm -rf \"\$YAY_TEMP_DIR\"
         "; then
             print_success "✅ Success: yay installed from AUR"
@@ -258,19 +258,163 @@ EOF
 }
 
 # --- Main execution logic ---
-# Check if the script is running as root
-if [ "$EUID" -eq 0 ]; then
-    run_system_setup
-    # Now, run the user-level setup as the original user
-    sudo -u "$USER_NAME" bash "$0" --user-only
-else
-    # If the user-only flag is set, run the user setup
-    if [[ "$1" == "--user-only" ]]; then
-        run_user_setup
-    else
-        print_error "This script must be run as root. Please run with 'sudo bash $0'."
-        exit 1
-    fi
+# Ensure the script is run as root
+if [ "$EUID" -ne 0 ]; then
+    print_error "This script must be run as root. Please run with 'sudo bash $0'."
+    exit 1
 fi
+
+run_system_setup
+
+# Execute the user-level setup commands as the original user
+# We're using a here-document with 'sudo -u' to ensure all commands are run with the correct permissions
+# without trying to re-execute the script, which was causing the issue.
+print_header "Starting User-Level Setup"
+sudo -u "$USER_NAME" bash -c "
+    set -euo pipefail
+
+    # --- Install yay if missing ---
+    if ! command -v yay &>/dev/null; then
+        echo -e '\n--- \e[1m\e[34mInstalling yay from AUR\e[0m ---'
+        if bash -c '
+            set -e
+            YAY_TEMP_DIR=\"\$(mktemp -d -p \"\$HOME\")\"
+            cd \"\$YAY_TEMP_DIR\"
+            
+            git clone https://aur.archlinux.org/yay.git
+            cd yay
+            makepkg -si --noconfirm
+            
+            rm -rf \"\$YAY_TEMP_DIR\"
+        '; then
+            echo -e '\e[32m✅ Success: yay installed from AUR\e[0m'
+        else
+            echo -e '\e[31m❌ Failed: yay installation failed\e[0m' >&2
+            exit 1
+        fi
+    else
+        echo -e '\n--- \e[1m\e[34myay is already installed.\e[0m ---'
+    fi
+
+    # --- AUR utilities ---
+    AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus)
+    for pkg in \"\${AUR_PACKAGES[@]}\"; do
+        echo -e '\n--- \e[1m\e[34mInstall '$pkg' via AUR\e[0m ---'
+        yay -S --noconfirm \"\$pkg\" || echo -e '\e[33mWarning: Installation of '$pkg' failed (non-fatal).\e[0m' >&2
+    done
+
+    # Set up user-specific directories and copy configs
+    USER_HOME=\"\$(getent passwd \"\$USER\" | cut -d: -f6)\"
+    CONFIG_DIR=\"\$USER_HOME/.config\"
+    REPO_DIR=\"$REPO_DIR\"
+    ASSETS_DEST=\"\$CONFIG_DIR/assets\"
+
+    # This part of the script is run as the user.
+    # We'll use the commands directly without the helper function
+    # because it's running in a subshell.
+
+    mkdir -p \"\$CONFIG_DIR/waybar\" \"\$CONFIG_DIR/tofi\" \"\$CONFIG_DIR/fastfetch\" \"\$CONFIG_DIR/hypr\" \"\$CONFIG_DIR/kitty\" \"\$CONFIG_DIR/dunst\" \"\$ASSETS_DEST/backgrounds\"
+    cp -r \"\$REPO_DIR/configs/waybar\"/* \"\$CONFIG_DIR/waybar\" || echo -e '\e[33mWarning: Failed to copy waybar config.\e[0m' >&2
+    cp -r \"\$REPO_DIR/configs/tofi\"/* \"\$CONFIG_DIR/tofi\" || echo -e '\e[33mWarning: Failed to copy tofi config.\e[0m' >&2
+    cp -r \"\$REPO_DIR/configs/fastfetch\"/* \"\$CONFIG_DIR/fastfetch\" || echo -e '\e[33mWarning: Failed to copy fastfetch config.\e[0m' >&2
+    cp -r \"\$REPO_DIR/configs/hypr\"/* \"\$CONFIG_DIR/hypr\" || echo -e '\e[33mWarning: Failed to copy hypr config.\e[0m' >&2
+    cp -r \"\$REPO_DIR/configs/kitty\"/* \"\$CONFIG_DIR/kitty\" || echo -e '\e[33mWarning: Failed to copy kitty config.\e[0m' >&2
+    cp -r \"\$REPO_DIR/configs/dunst\"/* \"\$CONFIG_DIR/dunst\" || echo -e '\e[33mWarning: Failed to copy dunst config.\e[0m' >&2
+    cp -r \"\$REPO_DIR/assets/backgrounds\"/* \"\$ASSETS_DEST/backgrounds\" || echo -e '\e[33mWarning: Failed to copy assets.\e[0m' >&2
+    
+    # --- Dracula Tofi Config Override ---
+    mkdir -p \"\$CONFIG_DIR/tofi\"
+    tee \"\$CONFIG_DIR/tofi/config\" >/dev/null <<'EOF'
+font = \"JetBrainsMono Nerd Font:size=14\"
+width = 60
+height = 200
+border-width = 2
+padding = 15
+corner-radius = 12
+background-color = rgba(40,42,54,0.85)
+border-color = #bd93f9
+text-color = #f8f8f2
+selection-color = #44475a
+selection-text-color = #f8f8f2
+prompt-color = #ff79c6
+EOF
+    
+    # --- Fastfetch & Starship shell integration ---
+    add_fastfetch_to_shell() {
+        local shell_config=\"\$1\"
+        local shell_file=\"\$USER_HOME/\$shell_config\"
+        local shell_content=\"\n# Added by Dracula Hyprland setup script\nif command -v fastfetch &>/dev/null; then\n  fastfetch --w-size 60 --w-border-color 44475a --w-color f8f8f2\nfi\n\"
+        if ! grep -q \"fastfetch\" \"\$shell_file\" 2>/dev/null; then
+            echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
+        fi
+    }
+
+    add_starship_to_shell() {
+        local shell_config=\"\$1\"
+        local shell_type=\"\$2\"
+        local shell_file=\"\$USER_HOME/\$shell_config\"
+        local shell_content=\"\n# Added by Dracula Hyprland setup script\neval \\\"\$(starship init \$shell_type)\\\"\\n\"
+        if ! grep -q \"starship\" \"\$shell_file\" 2>/dev/null; then
+            echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
+        fi
+    }
+
+    add_fastfetch_to_shell \".bashrc\"
+    add_fastfetch_to_shell \".zshrc\"
+
+    STARSHIP_SRC=\"$REPO_DIR/configs/starship/starship.toml\"
+    STARSHIP_DEST=\"\$CONFIG_DIR/starship.toml\"
+    if [ -f \"\$STARSHIP_SRC\" ]; then
+        cp \"\$STARSHIP_SRC\" \"\$STARSHIP_DEST\" || echo -e '\e[33mWarning: Failed to copy starship config.\e[0m' >&2
+    fi
+    add_starship_to_shell \".bashrc\" \"bash\"
+    add_starship_to_shell \".zshrc\" \"zsh\"
+
+    # --- GTK Dracula theme and icon setup ---
+    THEMES_DIR=\"\$USER_HOME/.themes\"
+    ICONS_DIR=\"\$USER_HOME/.icons\"
+
+    mkdir -p \"\$THEMES_DIR\" \"\$ICONS_DIR\"
+    cp -r \"$REPO_DIR/assets/themes/Dracula\" \"\$THEMES_DIR/Dracula\" || echo -e '\e[33mWarning: Failed to copy GTK theme.\e[0m' >&2
+    cp -r \"$REPO_DIR/assets/icons/Dracula\" \"\$ICONS_DIR/Dracula\" || echo -e '\e[33mWarning: Failed to copy icons.\e[0m' >&2
+
+    GTK3_CONFIG=\"\$CONFIG_DIR/gtk-3.0\"
+    GTK4_CONFIG=\"\$CONFIG_DIR/gtk-4.0\"
+    mkdir -p \"\$GTK3_CONFIG\" \"\$GTK4_CONFIG\"
+
+    GTK_SETTINGS=\"[Settings]\ngtk-theme-name=Dracula\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10\"
+
+    echo -e \"\$GTK_SETTINGS\" | tee \"\$GTK3_CONFIG/settings.ini\" \"\$GTK4_CONFIG/settings.ini\" >/dev/null
+
+    XPROFILE=\"\$USER_HOME/.xprofile\"
+    echo \"export GTK_THEME=Dracula\nexport ICON_THEME=Dracula\nexport XDG_CURRENT_DESKTOP=Hyprland\" >> \"\$XPROFILE\"
+
+    # --- Thunar Kitty custom action ---
+    UCA_DIR=\"\$CONFIG_DIR/Thunar\"
+    UCA_FILE=\"\$UCA_DIR/uca.xml\"
+    mkdir -p \"\$UCA_DIR\"
+    chmod 700 \"\$UCA_DIR\"
+
+    if [ ! -f \"\$UCA_FILE\" ]; then
+        tee \"\$UCA_FILE\" >/dev/null <<EOF
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<actions>
+  <action>
+    <icon>utilities-terminal</icon>
+    <name>Open Kitty Here</name>
+    <command>kitty --directory=%d</command>
+    <description>Open kitty terminal in the current folder</description>
+    <patterns>*</patterns>
+    <directories_only>true</directories_only>
+    <startup_notify>true</startup_notify>
+  </action>
+</actions>
+EOF
+    fi
+
+    # --- Restart Thunar to apply theme ---
+    pkill thunar || true
+    thunar &
+"
 
 print_success "\n🎉 The installation is complete! Please reboot your system to apply all changes."
