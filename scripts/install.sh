@@ -73,7 +73,7 @@ fi
 PACKAGES=(
     git base-devel pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
-    sddm kitty nano tar gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
+    sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
 )
@@ -214,42 +214,37 @@ sudo -u "$USER_NAME" bash -c "
 print_success "✅ Shell integrations complete."
 
 # --- GTK Dracula theme and icon setup ---
-print_header "Setting up GTK themes and icons"
+print_header "Setting up GTK themes and icons from local assets"
 THEMES_DIR="$USER_HOME/.themes"
 ICONS_DIR="$USER_HOME/.icons"
+ASSETS_DIR="$SCRIPT_DIR/assets"
 
-# Create a temporary directory to download the themes
-TEMP_DIR=$(sudo -u "$USER_NAME" mktemp -d)
-if [ ! -d "$TEMP_DIR" ]; then
-    print_error "Failed to create temporary directory."
+# Check if the asset files exist locally
+if [ ! -f "$ASSETS_DIR/dracula-gtk-master.zip" ]; then
+    print_error "Dracula GTK theme archive not found at $ASSETS_DIR/dracula-gtk-master.zip. Please download it and place it there."
 fi
-print_success "Created temporary directory: $TEMP_DIR"
+if [ ! -f "$ASSETS_DIR/Dracula.zip" ]; then
+    print_error "Dracula Icons archive not found at $ASSETS_DIR/Dracula.zip. Please download it and place it there."
+fi
+print_success "✅ Local asset files confirmed."
 
-# Download and extract Dracula GTK theme
-print_success "Downloading Dracula GTK theme..."
-GTK_URL="https://github.com/dracula/gtk/archive/refs/heads/master.tar.gz"
-if ! sudo -u "$USER_NAME" curl -L -o "$TEMP_DIR/gtk.tar.gz" "$GTK_URL"; then
-    print_error "Failed to download Dracula GTK theme."
-fi
+# Extract and install Dracula GTK theme
+print_success "Installing Dracula GTK theme..."
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
-sudo -u "$USER_NAME" tar -xzf "$TEMP_DIR/gtk.tar.gz" -C "$THEMES_DIR"
-sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/Dracula"
+sudo -u "$USER_NAME" unzip "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR"
+sudo -u "$USER_NAME" mv "$THEMES_DIR/dracula-gtk-master" "$THEMES_DIR/Dracula"
 print_success "✅ Dracula GTK theme installed."
 
-# Download and extract Dracula Icons
-print_success "Downloading Dracula Icons..."
-ICONS_URL="https://github.com/dracula/icons/archive/refs/heads/master.tar.gz"
-if ! sudo -u "$USER_NAME" curl -L -o "$TEMP_DIR/icons.tar.gz" "$ICONS_URL"; then
-    print_error "Failed to download Dracula Icons."
-fi
+# Extract and install Dracula Icons
+print_success "Installing Dracula Icons..."
 sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
-sudo -u "$USER_NAME" tar -xzf "$TEMP_DIR/icons.tar.gz" -C "$ICONS_DIR"
+sudo -u "$USER_NAME" unzip "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR"
 sudo -u "$USER_NAME" mv "$ICONS_DIR/icons-master" "$ICONS_DIR/Dracula"
 print_success "✅ Dracula Icons installed."
 
-# Clean up the temporary directory
-sudo -u "$USER_NAME" rm -rf "$TEMP_DIR"
-print_success "✅ Temporary directory cleaned up."
+
+# --- Clean up the temporary directory ---
+# Note: The temporary directory is no longer used, so this section is removed.
 
 GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
 GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
