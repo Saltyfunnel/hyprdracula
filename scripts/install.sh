@@ -53,9 +53,9 @@ print_header "Starting Full Dracula Hyprland Setup"
 
 # --- System packages ---
 PACKAGES=(
-    git base-devel yay pipewire wireplumber pamixer brightnessctl
+    git base-devel pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
-    sddm kitty nano tar gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
+    sddm kitty nano tar gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
 )
