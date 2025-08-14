@@ -57,16 +57,13 @@ PACKAGES=(
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
 )
-# Explicitly check if the array is populated before using it to prevent the "unbound variable" error.
-if [[ ${#PACKAGES[@]} -gt 0 ]]; then
-    if ! pacman -Syu "${PACKAGES[@]}" --noconfirm; then
-        print_error "Failed to install system packages."
-        exit 1
-    fi
-    print_success "✅ System packages installed."
-else
-    print_warning "No system packages to install. Skipping."
+# The conditional check for an empty array was removed to avoid "unbound variable" errors.
+# The pacman command can handle an empty array, so the check is not necessary.
+if ! pacman -Syu "${PACKAGES[@]}" --noconfirm; then
+    print_error "Failed to install system packages."
+    exit 1
 fi
+print_success "✅ System packages installed."
 
 
 # Enable services
