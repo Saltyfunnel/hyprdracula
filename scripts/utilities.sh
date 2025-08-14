@@ -11,7 +11,7 @@ USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME=$(eval echo "~$USER_NAME")
 
 CONFIG_DIR="$USER_HOME/.config"
-REPO_DIR="$USER_HOME/hyprbw"
+REPO_DIR="$USER_HOME/hyprdracula"
 ASSETS_SRC="$REPO_DIR/assets"
 ASSETS_DEST="$CONFIG_DIR/assets"
 
@@ -39,20 +39,37 @@ copy_as_user "$REPO_DIR/configs/tofi" "$CONFIG_DIR/tofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
 copy_as_user "$REPO_DIR/configs/hypr" "$CONFIG_DIR/hypr"
 
-# Add fastfetch to shells
-add_fastfetch_to_shell() {
-    local shell_rc="$1"
-    local shell_rc_path="$USER_HOME/$shell_rc"
+# --- Dracula Tofi Config Override ---
+sudo -u "$USER_NAME" mkdir -p "$CONFIG_DIR/tofi"
+cat << 'EOF' | sudo -u "$USER_NAME" tee "$CONFIG_DIR/tofi/config" >/dev/null
+# Dracula Tofi Config with transparency
+font = "JetBrainsMono Nerd Font:size=14"
+width = 60
+height = 200
+border-width = 2
+padding = 15
+corner-radius = 12
+background-color = rgba(40,42,54,0.85)
+border-color = #bd93f9
+text-color = #f8f8f2
+selection-color = #44475a
+selection-text-color = #f8f8f2
+prompt-color = #ff79c6
+EOF
+# ------------------------------------
+
+# Add fastfetch to bash only
+add_fastfetch_to_bash() {
+    local shell_rc="$USER_HOME/.bashrc"
     local fastfetch_line='fastfetch --kitty-direct /home/'"$USER_NAME"'/.config/fastfetch/archkitty.png'
 
-    if [ -f "$shell_rc_path" ] && ! grep -qF "$fastfetch_line" "$shell_rc_path"; then
-        echo -e "\n# Run fastfetch on terminal start\n$fastfetch_line" >> "$shell_rc_path"
-        chown "$USER_NAME:$USER_NAME" "$shell_rc_path"
+    if [ -f "$shell_rc" ] && ! grep -qF "$fastfetch_line" "$shell_rc"; then
+        echo -e "\n# Run fastfetch on terminal start\n$fastfetch_line" >> "$shell_rc"
+        chown "$USER_NAME:$USER_NAME" "$shell_rc"
     fi
 }
 
-add_fastfetch_to_shell ".bashrc"
-add_fastfetch_to_shell ".zshrc"
+add_fastfetch_to_bash
 
 run_command "pacman -S --noconfirm cliphist" "Install Cliphist" "yes"
 
@@ -67,20 +84,18 @@ if [ -f "$STARSHIP_SRC" ]; then
     chown "$USER_NAME:$USER_NAME" "$STARSHIP_DEST"
 fi
 
-add_starship_to_shell() {
-    local shell_rc="$1"
-    local shell_name="$2"
-    local shell_rc_path="$USER_HOME/$shell_rc"
-    local starship_line='eval "$(starship init '"$shell_name"')"'
+# Add starship to bash only
+add_starship_to_bash() {
+    local shell_rc="$USER_HOME/.bashrc"
+    local starship_line='eval "$(starship init bash)"'
 
-    if [ -f "$shell_rc_path" ] && ! grep -qF "$starship_line" "$shell_rc_path"; then
-        echo -e "\n$starship_line" >> "$shell_rc_path"
-        chown "$USER_NAME:$USER_NAME" "$shell_rc_path"
+    if [ -f "$shell_rc" ] && ! grep -qF "$starship_line" "$shell_rc"; then
+        echo -e "\n$starship_line" >> "$shell_rc"
+        chown "$USER_NAME:$USER_NAME" "$shell_rc"
     fi
 }
 
-add_starship_to_shell ".bashrc" "bash"
-add_starship_to_shell ".zshrc" "zsh"
+add_starship_to_bash
 
 # Papirus icons and folder coloring
 run_command "pacman -S --noconfirm papirus-icon-theme" "Install Papirus Icon Theme" "yes"
@@ -109,18 +124,6 @@ echo "$GTK_SETTINGS_CONTENT" | sudo -u "$USER_NAME" tee "$GTK3_CONFIG_DIR/settin
 chown -R "$USER_NAME:$USER_NAME" "$GTK3_CONFIG_DIR" "$GTK4_CONFIG_DIR"
 
 sudo -u "$USER_NAME" dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'
-
-# SDDM theming
-MONO_SDDM_REPO="https://github.com/pwyde/monochrome-kde.git"
-MONO_SDDM_TEMP="/tmp/monochrome-kde"
-MONO_THEME_NAME="monochrome"
-
-git clone --depth=1 "$MONO_SDDM_REPO" "$MONO_SDDM_TEMP"
-cp -r "$MONO_SDDM_TEMP/sddm/themes/$MONO_THEME_NAME" "/usr/share/sddm/themes/$MONO_THEME_NAME"
-chown -R root:root "/usr/share/sddm/themes/$MONO_THEME_NAME"
-mkdir -p /etc/sddm.conf.d
-echo -e "[Theme]\nCurrent=$MONO_THEME_NAME" > /etc/sddm.conf.d/10-theme.conf
-rm -rf "$MONO_SDDM_TEMP"
 
 # Thunar Kitty custom action
 setup_thunar_kitty_action() {
