@@ -201,7 +201,7 @@ sudo -u "$USER_NAME" bash -c "
   add_fastfetch_to_shell() {
       local shell_config=\"\$1\"
       local shell_file=\"$USER_HOME/\$shell_config\"
-      local shell_content=\"\\n# Added by Dracula Hyprland setup script\\nif command -v fastfetch &>/dev/null; then\\n  fastfetch --w-size 60 --w-border-color 44475a --w-color f8f8f2\\nfi\\n\"
+      local shell_content=\"\\n# Added by Dracula Hyprland setup script\\nif command -v fastfetch &>/dev/null; then\\n  fastfetch\\nfi\\n\"
       if ! grep -q \"fastfetch\" \"\$shell_file\" 2>/dev/null; then
           echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
       fi
