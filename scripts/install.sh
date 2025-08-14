@@ -89,7 +89,7 @@ fi
 PACKAGES=(
     git base-devel pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
-    sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
+    sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
     waybar
@@ -198,36 +198,37 @@ copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 
 print_header "Setting up Fastfetch and Starship"
 sudo -u "$USER_NAME" bash -c "
-  add_fastfetch_to_shell() {
-      local shell_config=\"\$1\"
-      local shell_file=\"$USER_HOME/\$shell_config\"
-      local shell_content=\"\\n# Added by Dracula Hyprland setup script\\nif command -v fastfetch &>/dev/null; then\\n  fastfetch\\nfi\\n\"
-      if ! grep -q \"fastfetch\" \"\$shell_file\" 2>/dev/null; then
-          echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
-      fi
-  }
-  add_starship_to_shell() {
-      local shell_config=\"\$1\"
-      local shell_type=\"\$2\"
-      local shell_file=\"$USER_HOME/\$shell_config\"
-      local shell_content=\"\\n# Added by Dracula Hyprland setup script\\neval \\\"\\\$(starship init \$shell_type)\\\"\\n\"
-      if ! grep -q \"starship\" \"\$shell_file\" 2>/dev/null; then
-          echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
-      fi
-  }
-  add_fastfetch_to_shell \".bashrc\" \"bash\"
-  add_fastfetch_to_shell \".zshrc\" \"zsh\"
-  
-  STARSHIP_SRC=\"$SCRIPT_DIR/configs/starship/starship.toml\"
-  STARSHIP_DEST=\"$CONFIG_DIR/starship.toml\"
-  if [ -f \"\$STARSHIP_SRC\" ]; then
-      cp \"\$STARSHIP_SRC\" \"\$STARSHIP_DEST\" || print_warning \"Failed to copy starship config.\"
-  fi
-  add_starship_to_shell \".bashrc\" \"bash\"
-  add_starship_to_shell \".zshrc\" \"zsh\"
+    add_fastfetch_to_shell() {
+        local shell_config=\"\$1\"
+        local shell_file=\"$USER_HOME/\$shell_config\"
+        local shell_content=\"\\n# Added by Dracula Hyprland setup script\\nif command -v fastfetch &>/dev/null; then\\n  fastfetch\\nfi\\n\"
+        if ! grep -q \"fastfetch\" \"\$shell_file\" 2>/dev/null; then
+            echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
+        fi
+    }
+    add_starship_to_shell() {
+        local shell_config=\"\$1\"
+        local shell_type=\"\$2\"
+        local shell_file=\"$USER_HOME/\$shell_config\"
+        local shell_content=\"\\n# Added by Dracula Hyprland setup script\\neval \\\"\\\$(starship init \$shell_type)\\\"\\n\"
+        if ! grep -q \"starship\" \"\$shell_file\" 2>/dev/null; then
+            echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
+        fi
+    }
+    add_fastfetch_to_shell \".bashrc\" \"bash\"
+    add_fastfetch_to_shell \".zshrc\" \"zsh\"
+    
+    STARSHIP_SRC=\"$SCRIPT_DIR/configs/starship/starship.toml\"
+    STARSHIP_DEST=\"$CONFIG_DIR/starship.toml\"
+    if [ -f \"\$STARSHIP_SRC\" ]; then
+        cp \"\$STARSHIP_SRC\" \"\$STARSHIP_DEST\" || print_warning \"Failed to copy starship config.\"
+    fi
+    add_starship_to_shell \".bashrc\" \"bash\"
+    add_starship_to_shell \".zshrc\" \"zsh\"
 "
 print_success "✅ Shell integrations complete."
 
+# --- Setting up GTK themes and icons from local zip files ---
 print_header "Setting up GTK themes and icons from local zip files"
 THEMES_DIR="$USER_HOME/.themes"
 ICONS_DIR="$USER_HOME/.icons"
@@ -253,6 +254,15 @@ print_success "Installing Dracula Icons..."
 sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
 sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null
 print_success "✅ Dracula Icons installed."
+
+# --- The key addition: Update the icon cache to ensure icons are found by applications like Thunar. ---
+if command -v gtk-update-icon-cache &>/dev/null; then
+    print_success "Updating the GTK icon cache for a smooth user experience..."
+    sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/Dracula"
+    print_success "✅ GTK icon cache updated successfully."
+else
+    print_warning "gtk-update-icon-cache not found. Icons may not appear correctly until a reboot."
+fi
 
 GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
 GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
@@ -311,15 +321,15 @@ if [ ! -f "$UCA_FILE" ]; then
     sudo -u "$USER_NAME" tee "$UCA_FILE" >/dev/null <<'EOF_UCA'
 <?xml version="1.0" encoding="UTF-8"?>
 <actions>
-  <action>
-    <icon>utilities-terminal</icon>
-    <name>Open Kitty Here</name>
-    <command>kitty --directory=%d</command>
-    <description>Open kitty terminal in the current folder</description>
-    <patterns>*</patterns>
-    <directories_only>true</directories_only>
-    <startup_notify>true</startup_notify>
-  </action>
+    <action>
+        <icon>utilities-terminal</icon>
+        <name>Open Kitty Here</name>
+        <command>kitty --directory=%d</command>
+        <description>Open kitty terminal in the current folder</description>
+        <patterns>*</patterns>
+        <directories_only>true</directories_only>
+        <startup_notify>true</startup_notify>
+    </action>
 </actions>
 EOF_UCA
 fi
