@@ -39,8 +39,9 @@ copy_as_user "$REPO_DIR/configs/tofi" "$CONFIG_DIR/tofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
 copy_as_user "$REPO_DIR/configs/hypr" "$CONFIG_DIR/hypr"
 copy_as_user "$REPO_DIR/configs/kitty" "$CONFIG_DIR/kitty"
+copy_as_user "$REPO_DIR/configs/dunst" "$CONFIG_DIR/dunst"
 
-# Add fastfetch to bash
+# Add fastfetch to shell
 add_fastfetch_to_shell() {
     local shell_rc="$1"
     local shell_rc_path="$USER_HOME/$shell_rc"
@@ -53,10 +54,6 @@ add_fastfetch_to_shell() {
 }
 
 add_fastfetch_to_shell ".bashrc"
-
-run_command "pacman -S --noconfirm cliphist" "Install Cliphist" "yes"
-
-copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
 
 # Starship config
 STARSHIP_SRC="$REPO_DIR/configs/starship/starship.toml"
@@ -81,33 +78,9 @@ add_starship_to_shell() {
 
 add_starship_to_shell ".bashrc" "bash"
 
-# Papirus icons and folder coloring
-run_command "pacman -S --noconfirm papirus-icon-theme" "Install Papirus Icon Theme" "yes"
-
-if ! command -v papirus-folders &>/dev/null; then
-    TMP_DIR=$(mktemp -d)
-    git clone https://github.com/PapirusDevelopmentTeam/papirus-folders.git "$TMP_DIR"
-    install -Dm755 "$TMP_DIR/papirus-folders" /usr/local/bin/papirus-folders
-    rm -rf "$TMP_DIR"
-fi
-
-sudo -u "$USER_NAME" dbus-launch papirus-folders -C grey --theme Papirus-Dark
-
-# GTK theming
-GTK3_CONFIG_DIR="$USER_HOME/.config/gtk-3.0"
-GTK4_CONFIG_DIR="$USER_HOME/.config/gtk-4.0"
-
-mkdir -p "$GTK3_CONFIG_DIR" "$GTK4_CONFIG_DIR"
-
-GTK_SETTINGS_CONTENT="[Settings]
-gtk-theme-name=FlatColor
-gtk-icon-theme-name=Papirus-Dark
-gtk-font-name=JetBrainsMono 10"
-
-echo "$GTK_SETTINGS_CONTENT" | sudo -u "$USER_NAME" tee "$GTK3_CONFIG_DIR/settings.ini" "$GTK4_CONFIG_DIR/settings.ini" >/dev/null
-chown -R "$USER_NAME:$USER_NAME" "$GTK3_CONFIG_DIR" "$GTK4_CONFIG_DIR"
-
-sudo -u "$USER_NAME" dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'
+# Additional utilities
+run_command "pacman -S --noconfirm cliphist" "Install Cliphist" "yes"
+copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
 
 # Thunar Kitty custom action
 setup_thunar_kitty_action() {
