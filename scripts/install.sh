@@ -76,6 +76,7 @@ PACKAGES=(
     sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
+    waybar
 )
 # We perform the system update and package installation in a single command.
 # Using "${PACKAGES[@]:-}" prevents unbound variable errors with empty arrays.
