@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# --- Variables ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(eval echo "~$USER_NAME")"
@@ -12,7 +11,7 @@ ASSETS_DEST="$CONFIG_DIR/assets"
 
 source "$SCRIPT_DIR/helper.sh"
 
-# --- Helper Functions ---
+# --- Helpers ---
 copy_as_user() {
     local src="$1"
     local dest="$2"
@@ -25,36 +24,15 @@ copy_as_user() {
     run_command "chown -R $USER_NAME:$USER_NAME \"$dest\"" "Fix ownership for $dest" "no" "yes"
 }
 
-add_fastfetch_to_shell() {
-    local shell_rc="$1"
-    local shell_rc_path="$USER_HOME/$shell_rc"
-    local fastfetch_line="fastfetch --kitty-direct $CONFIG_DIR/fastfetch/archkitty.png"
-    if [ -f "$shell_rc_path" ] && ! grep -qF "$fastfetch_line" "$shell_rc_path"; then
-        echo -e "\n# Run fastfetch on terminal start\n$fastfetch_line" >> "$shell_rc_path"
-        chown "$USER_NAME:$USER_NAME" "$shell_rc_path"
-    fi
-}
-
-add_starship_to_shell() {
-    local shell_rc="$1"
-    local shell_name="$2"
-    local shell_rc_path="$USER_HOME/$shell_rc"
-    local starship_line="eval \"\$(starship init $shell_name)\""
-    if [ -f "$shell_rc_path" ] && ! grep -qF "$starship_line" "$shell_rc_path"; then
-        echo -e "\n$starship_line" >> "$shell_rc_path"
-        chown "$USER_NAME:$USER_NAME" "$shell_rc_path"
-    fi
-}
-
 # --- Root checks ---
 check_root
 check_os
 
-print_header "🚀 Starting Full Dracula Hyprland Setup"
+print_header "Starting Full Dracula Hyprland Setup"
 
-# --- System Packages ---
+# --- System packages ---
 PACKAGES=(
-    git base-devel pipewire wireplumber pamixer brightnessctl
+    git base-devel yay pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
     sddm kitty nano tar gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
@@ -63,7 +41,7 @@ PACKAGES=(
 run_command "pacman -Syu --noconfirm" "Update system packages" "yes"
 run_command "pacman -S --noconfirm ${PACKAGES[*]}" "Install system packages" "yes"
 
-# --- Enable Services ---
+# --- Enable services ---
 run_command "systemctl enable --now polkit.service" "Enable polkit" "yes"
 run_command "systemctl enable sddm.service" "Enable SDDM" "yes"
 
@@ -71,17 +49,17 @@ run_command "systemctl enable sddm.service" "Enable SDDM" "yes"
 if ! command -v yay &>/dev/null; then
     run_command "git clone https://aur.archlinux.org/yay.git /tmp/yay" "Clone yay" "no" "no"
     run_command "chown -R $USER_NAME:$USER_NAME /tmp/yay" "Fix ownership" "no" "no"
-    run_command "sudo -u $USER_NAME bash -c 'cd /tmp/yay && makepkg -si --noconfirm'" "Build yay" "no" "no"
+    run_command "cd /tmp/yay && sudo -u $USER_NAME makepkg -si --noconfirm" "Build yay" "no" "no"
     run_command "rm -rf /tmp/yay" "Clean yay temp" "no" "no"
 fi
 
-# --- AUR Utilities ---
+# --- AUR utilities ---
 AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus)
 for pkg in "${AUR_PACKAGES[@]}"; do
-    run_command "sudo -u $USER_NAME yay -S --noconfirm $pkg" "Install $pkg via AUR" "yes" "no"
+    run_command "yay -S --noconfirm $pkg" "Install $pkg via AUR" "yes" "no"
 done
 
-# --- Copy Configs ---
+# --- Copy configs ---
 copy_as_user "$REPO_DIR/configs/waybar" "$CONFIG_DIR/waybar"
 copy_as_user "$REPO_DIR/configs/tofi" "$CONFIG_DIR/tofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
@@ -90,7 +68,7 @@ copy_as_user "$REPO_DIR/configs/kitty" "$CONFIG_DIR/kitty"
 copy_as_user "$REPO_DIR/configs/dunst" "$CONFIG_DIR/dunst"
 copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
 
-# --- Dracula Tofi Config ---
+# --- Dracula Tofi Config Override ---
 sudo -u "$USER_NAME" tee "$CONFIG_DIR/tofi/config" >/dev/null <<'EOF'
 font = "JetBrainsMono Nerd Font:size=14"
 width = 60
@@ -106,10 +84,9 @@ selection-text-color = #f8f8f2
 prompt-color = #ff79c6
 EOF
 
-# --- Fastfetch & Starship Shell Integration ---
+# --- Fastfetch & Starship shell integration ---
 add_fastfetch_to_shell ".bashrc"
 add_fastfetch_to_shell ".zshrc"
-
 STARSHIP_SRC="$REPO_DIR/configs/starship/starship.toml"
 STARSHIP_DEST="$CONFIG_DIR/starship.toml"
 if [ -f "$STARSHIP_SRC" ]; then
@@ -119,7 +96,17 @@ fi
 add_starship_to_shell ".bashrc" "bash"
 add_starship_to_shell ".zshrc" "zsh"
 
-# --- GTK Dracula Theme ---
+# --- GTK Dracula theme and icon setup ---
+THEMES_DIR="$USER_HOME/.themes"
+ICONS_DIR="$USER_HOME/.icons"
+
+mkdir -p "$THEMES_DIR" "$ICONS_DIR"
+
+# Copy themes/icons from repo
+copy_as_user "$ASSETS_SRC/themes/Dracula" "$THEMES_DIR/Dracula"
+copy_as_user "$ASSETS_SRC/icons/Dracula" "$ICONS_DIR/Dracula"
+
+# Create GTK settings
 GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
 GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
 mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
@@ -132,10 +119,16 @@ gtk-font-name=JetBrainsMono 10"
 echo "$GTK_SETTINGS" | sudo -u "$USER_NAME" tee "$GTK3_CONFIG/settings.ini" "$GTK4_CONFIG/settings.ini" >/dev/null
 chown -R "$USER_NAME:$USER_NAME" "$GTK3_CONFIG" "$GTK4_CONFIG"
 
-sudo -u "$USER_NAME" dbus-launch gsettings set org.gnome.desktop.interface gtk-theme 'Dracula'
-sudo -u "$USER_NAME" dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'Dracula'
+# Ensure GTK apps pick up theme via .xprofile
+XPROFILE="$USER_HOME/.xprofile"
+if ! grep -q "GTK_THEME=Dracula" "$XPROFILE" 2>/dev/null; then
+    echo "export GTK_THEME=Dracula" >> "$XPROFILE"
+    echo "export ICON_THEME=Dracula" >> "$XPROFILE"
+    echo "export XDG_CURRENT_DESKTOP=Hyprland" >> "$XPROFILE"
+    chown "$USER_NAME:$USER_NAME" "$XPROFILE"
+fi
 
-# --- Thunar Kitty Custom Action ---
+# --- Thunar Kitty custom action ---
 UCA_DIR="$CONFIG_DIR/Thunar"
 UCA_FILE="$UCA_DIR/uca.xml"
 mkdir -p "$UCA_DIR"
@@ -160,4 +153,8 @@ EOF
     chown "$USER_NAME:$USER_NAME" "$UCA_FILE"
 fi
 
-print_success "\n✅ Full Dracula Hyprland setup complete! Reboot to apply all changes."
+# --- Restart Thunar to apply theme ---
+sudo -u "$USER_NAME" pkill thunar || true
+sudo -u "$USER_NAME" thunar &
+
+print_success "\n✅ Full Dracula Hyprland setup complete! Reboot or log out/in to apply all GTK and Thunar changes."
