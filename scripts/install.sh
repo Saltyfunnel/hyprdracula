@@ -210,9 +210,31 @@ print_header "Setting up GTK themes and icons"
 THEMES_DIR="$USER_HOME/.themes"
 ICONS_DIR="$USER_HOME/.icons"
 
+# Create a temporary directory to clone the themes
+TEMP_DIR=$(sudo -u "$USER_NAME" mktemp -d)
+if [ ! -d "$TEMP_DIR" ]; then
+    print_error "Failed to create temporary directory."
+fi
+print_success "Created temporary directory: $TEMP_DIR"
+
+# Clone Dracula GTK and Icons from GitHub
+print_success "Cloning Dracula themes from GitHub..."
+if ! sudo -u "$USER_NAME" git clone https://github.com/dracula/gtk.git "$TEMP_DIR/gtk"; then
+    print_error "Failed to clone Dracula GTK theme."
+fi
+if ! sudo -u "$USER_NAME" git clone https://github.com/dracula/icons.git "$TEMP_DIR/icons"; then
+    print_error "Failed to clone Dracula Icons theme."
+fi
+print_success "✅ Themes cloned successfully."
+
+# Copy the cloned themes to the user's home directory
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR" "$ICONS_DIR"
-sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/assets/themes/Dracula" "$THEMES_DIR/Dracula" || print_warning "Failed to copy GTK theme."
-sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/assets/icons/Dracula" "$ICONS_DIR/Dracula" || print_warning "Failed to copy icons."
+sudo -u "$USER_NAME" cp -r "$TEMP_DIR/gtk/Dracula" "$THEMES_DIR/Dracula" || print_warning "Failed to copy GTK theme."
+sudo -u "$USER_NAME" cp -r "$TEMP_DIR/icons/Dracula" "$ICONS_DIR/Dracula" || print_warning "Failed to copy icons."
+
+# Clean up the temporary directory
+sudo -u "$USER_NAME" rm -rf "$TEMP_DIR"
+print_success "✅ Temporary directory cleaned up."
 
 GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
 GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
