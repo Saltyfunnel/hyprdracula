@@ -29,7 +29,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Define variables
-# The script now correctly navigates up one directory to find the configs and assets.
+# The script now correctly navigates up one directory to find the configs.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
@@ -47,11 +47,20 @@ fi
 print_header "Running Pre-run Checks"
 
 # Check for required directories in the script's location
-if [ ! -d "$SCRIPT_DIR/configs" ] || [ ! -d "$SCRIPT_DIR/assets" ]; then
-    print_error "Required 'configs' and 'assets' directories not found in the script's directory: $SCRIPT_DIR.
+if [ ! -d "$SCRIPT_DIR/configs" ]; then
+    print_error "Required 'configs' directory not found in the script's directory: $SCRIPT_DIR.
     Please ensure the entire repository is cloned and you are running the script from its root directory."
 fi
 print_success "✅ File structure confirmed."
+
+# Check for necessary tools before proceeding
+if ! command -v git &>/dev/null; then
+    print_error "git is not installed. Please install it with 'sudo pacman -S git'."
+fi
+if ! command -v curl &>/dev/null; then
+    print_error "curl is not installed. Please install it with 'sudo pacman -S curl'."
+fi
+print_success "✅ Required tools (git, curl) confirmed."
 
 # --- System-level tasks ---
 print_header "Starting System-Level Setup"
@@ -151,7 +160,6 @@ copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
-copy_configs "$SCRIPT_DIR/assets/backgrounds" "$CONFIG_DIR/assets/backgrounds" "backgrounds"
 
 # --- Dracula Tofi Config Override ---
 print_header "Setting up Dracula Tofi config"
@@ -210,27 +218,34 @@ print_header "Setting up GTK themes and icons"
 THEMES_DIR="$USER_HOME/.themes"
 ICONS_DIR="$USER_HOME/.icons"
 
-# Create a temporary directory to clone the themes
+# Create a temporary directory to download the themes
 TEMP_DIR=$(sudo -u "$USER_NAME" mktemp -d)
 if [ ! -d "$TEMP_DIR" ]; then
     print_error "Failed to create temporary directory."
 fi
 print_success "Created temporary directory: $TEMP_DIR"
 
-# Clone Dracula GTK and Icons from GitHub
-print_success "Cloning Dracula themes from GitHub..."
-if ! sudo -u "$USER_NAME" git clone https://github.com/dracula/gtk.git "$TEMP_DIR/gtk"; then
-    print_error "Failed to clone Dracula GTK theme."
+# Download and extract Dracula GTK theme
+print_success "Downloading Dracula GTK theme..."
+GTK_URL="https://github.com/dracula/gtk/archive/refs/heads/master.tar.gz"
+if ! sudo -u "$USER_NAME" curl -L -o "$TEMP_DIR/gtk.tar.gz" "$GTK_URL"; then
+    print_error "Failed to download Dracula GTK theme."
 fi
-if ! sudo -u "$USER_NAME" git clone https://github.com/dracula/icons.git "$TEMP_DIR/icons"; then
-    print_error "Failed to clone Dracula Icons theme."
-fi
-print_success "✅ Themes cloned successfully."
+sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
+sudo -u "$USER_NAME" tar -xzf "$TEMP_DIR/gtk.tar.gz" -C "$THEMES_DIR"
+sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/Dracula"
+print_success "✅ Dracula GTK theme installed."
 
-# Copy the cloned themes to the user's home directory
-sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR" "$ICONS_DIR"
-sudo -u "$USER_NAME" cp -r "$TEMP_DIR/gtk/Dracula" "$THEMES_DIR/Dracula" || print_warning "Failed to copy GTK theme."
-sudo -u "$USER_NAME" cp -r "$TEMP_DIR/icons/Dracula" "$ICONS_DIR/Dracula" || print_warning "Failed to copy icons."
+# Download and extract Dracula Icons
+print_success "Downloading Dracula Icons..."
+ICONS_URL="https://github.com/dracula/dracula-icons/archive/refs/heads/main.tar.gz"
+if ! sudo -u "$USER_NAME" curl -L -o "$TEMP_DIR/icons.tar.gz" "$ICONS_URL"; then
+    print_error "Failed to download Dracula Icons."
+fi
+sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
+sudo -u "$USER_NAME" tar -xzf "$TEMP_DIR/icons.tar.gz" -C "$ICONS_DIR"
+sudo -u "$USER_NAME" mv "$ICONS_DIR/dracula-icons-main" "$ICONS_DIR/Dracula"
+print_success "✅ Dracula Icons installed."
 
 # Clean up the temporary directory
 sudo -u "$USER_NAME" rm -rf "$TEMP_DIR"
@@ -259,7 +274,7 @@ if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; the
     sudo -u "$USER_NAME" echo -e "\n# Sourced by the setup script to set GTK and icon themes\nsource = $HYPR_VARS_FILE" >> "$HYPR_CONF"
 fi
 
-print_success "✅ GTK themes configured for Hyprland."
+print_success "✅ GTK themes and icons configured for Hyprland."
 
 # --- Thunar Kitty custom action ---
 print_header "Setting up Thunar custom action"
