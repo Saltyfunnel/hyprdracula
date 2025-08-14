@@ -57,25 +57,13 @@ PACKAGES=(
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
 )
-# We perform the system update first, and then install the packages.
-# This prevents potential errors with unbound variables when using the array.
-if ! pacman -Syu --noconfirm; then
-    print_error "Failed to update system."
+# We perform the system update and package installation in a single command.
+# Using "${PACKAGES[@]:-}" prevents unbound variable errors with empty arrays.
+if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
+    print_error "Failed to install system packages."
     exit 1
 fi
-print_success "✅ System updated."
-
-# Check if the PACKAGES array is not empty before attempting to install packages
-if [[ ${#PACKAGES[@]} -gt 0 ]]; then
-    # Using "${PACKAGES[@]:-}" to prevent unbound variable errors with empty arrays
-    if ! pacman -S "${PACKAGES[@]:-}" --noconfirm; then
-        print_error "Failed to install system packages."
-        exit 1
-    fi
-    print_success "✅ System packages installed."
-else
-    print_warning "No system packages to install. Skipping package installation."
-fi
+print_success "✅ System updated and packages installed."
 
 # Enable services
 if [ "$CONFIRMATION" == "yes" ]; then
