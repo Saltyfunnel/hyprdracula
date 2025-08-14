@@ -127,16 +127,20 @@ run_command "systemctl enable sddm.service" "Enable SDDM" "yes"
 # --- Install yay if missing ---
 if ! command -v yay &>/dev/null; then
     print_header "Installing yay from AUR"
-    # Execute the entire yay installation process as the non-root user.
-    # This prevents makepkg from running as root and avoids permission issues.
+    # Execute the entire yay installation process as the non-root user
+    # in a temporary directory within their own home folder.
     if sudo -u "$USER_NAME" bash -c "
         set -e
-        cd /tmp
+        # Create a temporary directory in the user's home
+        YAY_TEMP_DIR=\"\$(mktemp -d -p \"\$HOME\")\"
+        cd \"\$YAY_TEMP_DIR\"
+        
         git clone https://aur.archlinux.org/yay.git
         cd yay
         makepkg -si --noconfirm
-        cd ..
-        rm -rf yay
+        
+        # Clean up the temporary directory
+        rm -rf \"\$YAY_TEMP_DIR\"
     "; then
         print_success "✅ Success: yay installed from AUR"
     else
