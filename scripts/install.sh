@@ -128,7 +128,7 @@ declare -a AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypri
 # Install all AUR packages at once to avoid unbound variable issues with loops.
 if [[ "\${#AUR_PACKAGES[@]}" -gt 0 ]]; then
     print_header "Installing AUR packages..."
-    if ! yay -S --noconfirm "\${AUR_PACKAGES[@]:-}"; then
+    if ! yay -S --noconfirm "\${AUR_PACKAGES[@]}"; then
         print_warning "Installation of some AUR packages failed (non-fatal)."
     else
         print_success "✅ All AUR packages installed."
