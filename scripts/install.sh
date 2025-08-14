@@ -49,6 +49,7 @@ print_header "Starting System-Level Setup"
 if [ "$CONFIRMATION" == "yes" ]; then
     read -p "Update system and install packages? Press Enter to continue..."
 fi
+# The PACKAGES array is defined just before it is used to ensure it's always in scope.
 PACKAGES=(
     git base-devel pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
