@@ -18,6 +18,7 @@ print_warning() {
 
 print_error() {
     echo -e "\e[31mError: $1\e[0m" >&2
+    exit 1
 }
 
 # --- Main Execution Logic ---
@@ -25,7 +26,6 @@ print_error() {
 # Check if the script is run as root
 if [ "$EUID" -ne 0 ]; then
     print_error "This script must be run as root. Please run with 'sudo bash $0'."
-    exit 1
 fi
 
 # Define variables
@@ -41,6 +41,16 @@ elif [[ $# -gt 0 ]]; then
     echo "Usage: $0 [--noconfirm]"
     exit 1
 fi
+
+# --- Pre-run checks ---
+print_header "Running Pre-run Checks"
+
+# Check for required directories in the script's location
+if [ ! -d "$SCRIPT_DIR/configs" ] || [ ! -d "$SCRIPT_DIR/assets" ]; then
+    print_error "Required 'configs' and 'assets' directories not found in the script's directory: $SCRIPT_DIR.
+    Please ensure the entire repository is cloned and you are running the script from its root directory."
+fi
+print_success "✅ File structure confirmed."
 
 # --- System-level tasks ---
 print_header "Starting System-Level Setup"
@@ -61,7 +71,6 @@ PACKAGES=(
 # Using "${PACKAGES[@]:-}" prevents unbound variable errors with empty arrays.
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
-    exit 1
 fi
 print_success "✅ System updated and packages installed."
 
@@ -95,7 +104,6 @@ if ! sudo -u "$USER_NAME" command -v yay &>/dev/null; then
         print_success "✅ Success: yay installed from AUR"
     else
         print_error "❌ Failed: yay installation failed"
-        exit 1
     fi
 else
     print_header "yay is already installed."
@@ -115,92 +123,34 @@ else
     print_warning "No AUR packages to install. Skipping package installation."
 fi
 
+# --- File Copying Function ---
+copy_configs() {
+    local source_dir="$1"
+    local dest_dir="$2"
+    local config_name="$3"
+
+    print_success "Copying $config_name from '$source_dir' to '$dest_dir'."
+    if ! sudo -u "$USER_NAME" mkdir -p "$dest_dir"; then
+        print_warning "Failed to create destination directory for $config_name: '$dest_dir'."
+        return 1
+    fi
+    if ! sudo -u "$USER_NAME" cp -r "$source_dir/." "$dest_dir"; then
+        print_warning "Failed to copy $config_name."
+        return 1
+    fi
+    print_success "✅ Copied $config_name."
+    return 0
+}
+
 # --- Copy configs ---
 print_header "Copying configuration files"
-
-# Copy Waybar configs
-SOURCE_DIR="$SCRIPT_DIR/configs/waybar"
-DEST_DIR="$CONFIG_DIR/waybar"
-if [ -d "$SOURCE_DIR" ]; then
-    print_success "Copying Waybar configs from '$SOURCE_DIR' to '$DEST_DIR'."
-    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
-    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
-    print_success "✅ Copied Waybar configs."
-else
-    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
-fi
-
-# Copy Tofi configs
-SOURCE_DIR="$SCRIPT_DIR/configs/tofi"
-DEST_DIR="$CONFIG_DIR/tofi"
-if [ -d "$SOURCE_DIR" ]; then
-    print_success "Copying Tofi configs from '$SOURCE_DIR' to '$DEST_DIR'."
-    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
-    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
-    print_success "✅ Copied Tofi configs."
-else
-    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
-fi
-
-# Copy Fastfetch configs
-SOURCE_DIR="$SCRIPT_DIR/configs/fastfetch"
-DEST_DIR="$CONFIG_DIR/fastfetch"
-if [ -d "$SOURCE_DIR" ]; then
-    print_success "Copying Fastfetch configs from '$SOURCE_DIR' to '$DEST_DIR'."
-    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
-    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
-    print_success "✅ Copied Fastfetch configs."
-else
-    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
-fi
-
-# Copy Hypr configs
-SOURCE_DIR="$SCRIPT_DIR/configs/hypr"
-DEST_DIR="$CONFIG_DIR/hypr"
-if [ -d "$SOURCE_DIR" ]; then
-    print_success "Copying Hypr configs from '$SOURCE_DIR' to '$DEST_DIR'."
-    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
-    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
-    print_success "✅ Copied Hypr configs."
-else
-    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
-fi
-
-# Copy Kitty configs
-SOURCE_DIR="$SCRIPT_DIR/configs/kitty"
-DEST_DIR="$CONFIG_DIR/kitty"
-if [ -d "$SOURCE_DIR" ]; then
-    print_success "Copying Kitty configs from '$SOURCE_DIR' to '$DEST_DIR'."
-    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
-    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
-    print_success "✅ Copied Kitty configs."
-else
-    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
-fi
-
-# Copy Dunst configs
-SOURCE_DIR="$SCRIPT_DIR/configs/dunst"
-DEST_DIR="$CONFIG_DIR/dunst"
-if [ -d "$SOURCE_DIR" ]; then
-    print_success "Copying Dunst configs from '$SOURCE_DIR' to '$DEST_DIR'."
-    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
-    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
-    print_success "✅ Copied Dunst configs."
-else
-    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
-fi
-
-# Copy assets and backgrounds
-SOURCE_DIR="$SCRIPT_DIR/assets/backgrounds"
-DEST_DIR="$CONFIG_DIR/assets/backgrounds"
-if [ -d "$SOURCE_DIR" ]; then
-    print_success "Copying backgrounds from '$SOURCE_DIR' to '$DEST_DIR'."
-    sudo -u "$USER_NAME" mkdir -p "$DEST_DIR"
-    sudo -u "$USER_NAME" cp -r "$SOURCE_DIR/." "$DEST_DIR"
-    print_success "✅ Copied assets and backgrounds."
-else
-    print_warning "Source directory not found: $SOURCE_DIR. Skipping."
-fi
+copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
+copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
+copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
+copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
+copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
+copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
+copy_configs "$SCRIPT_DIR/assets/backgrounds" "$CONFIG_DIR/assets/backgrounds" "backgrounds"
 
 # --- Dracula Tofi Config Override ---
 print_header "Setting up Dracula Tofi config"
