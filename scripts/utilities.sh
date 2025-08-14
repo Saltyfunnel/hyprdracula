@@ -29,25 +29,22 @@ copy_as_user() {
     run_command "chown -R $USER_NAME:$USER_NAME \"$dest\"" "Fix ownership for $dest" "no" "yes"
 }
 
-# Set yay to fully automatic
-export YAY_CONFIRM=1
+# --- Pacman utilities ---
+run_command "pacman -S --noconfirm waybar cliphist" "Install core utilities" "yes"
 
-# Install core utilities
-run_command "pacman -S --noconfirm --needed waybar" "Install Waybar" "yes"
+# --- AUR utilities (non-interactive) ---
+export YAY_BATCH=1
+run_command "yay -S --noconfirm --needed tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus" "Install AUR utilities" "yes" "no"
+
+# --- Config copy ---
 copy_as_user "$REPO_DIR/configs/waybar" "$CONFIG_DIR/waybar"
-
-# Install AUR utilities non-interactively
-run_command "yay -S --noconfirm --needed --nodiffmenu --nocleanmenu --nocheck \
-    tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus" \
-    "Install AUR utilities" "yes" "no"
-
 copy_as_user "$REPO_DIR/configs/tofi" "$CONFIG_DIR/tofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
 copy_as_user "$REPO_DIR/configs/hypr" "$CONFIG_DIR/hypr"
 copy_as_user "$REPO_DIR/configs/kitty" "$CONFIG_DIR/kitty"
 copy_as_user "$REPO_DIR/configs/dunst" "$CONFIG_DIR/dunst"
 
-# Add fastfetch to shell
+# --- Fastfetch shell integration ---
 add_fastfetch_to_shell() {
     local shell_rc="$1"
     local shell_rc_path="$USER_HOME/$shell_rc"
@@ -58,13 +55,11 @@ add_fastfetch_to_shell() {
         chown "$USER_NAME:$USER_NAME" "$shell_rc_path"
     fi
 }
-
 add_fastfetch_to_shell ".bashrc"
 
-# Starship config
+# --- Starship shell integration ---
 STARSHIP_SRC="$REPO_DIR/configs/starship/starship.toml"
 STARSHIP_DEST="$CONFIG_DIR/starship.toml"
-
 if [ -f "$STARSHIP_SRC" ]; then
     cp "$STARSHIP_SRC" "$STARSHIP_DEST"
     chown "$USER_NAME:$USER_NAME" "$STARSHIP_DEST"
@@ -81,14 +76,12 @@ add_starship_to_shell() {
         chown "$USER_NAME:$USER_NAME" "$shell_rc_path"
     fi
 }
-
 add_starship_to_shell ".bashrc" "bash"
 
-# Additional utilities
-run_command "pacman -S --noconfirm --needed cliphist" "Install Cliphist" "yes"
+# --- Assets ---
 copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
 
-# Thunar Kitty custom action
+# --- Thunar Kitty custom action ---
 setup_thunar_kitty_action() {
   local uca_dir="$CONFIG_DIR/Thunar"
   local uca_file="$uca_dir/uca.xml"
@@ -125,7 +118,6 @@ $kitty_action_xml
     fi
   fi
 }
-
 setup_thunar_kitty_action
 
 print_success "\nUtilities setup complete!"
