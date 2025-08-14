@@ -214,9 +214,9 @@ print_success "✅ Local asset files confirmed."
 print_success "Installing Dracula GTK theme..."
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
 sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null
-# The unzipped folder is often named 'dracula-gtk-master'. We rename it for consistency.
-if [ -d "$THEMES_DIR/dracula-gtk-master" ]; then
-    sudo -u "$USER_NAME" mv "$THEMES_DIR/dracula-gtk-master" "$THEMES_DIR/dracula-gtk"
+# The unzipped folder is named 'gtk-master'. We rename it for consistency.
+if [ -d "$THEMES_DIR/gtk-master" ]; then
+    sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/dracula-gtk"
 fi
 print_success "✅ Dracula GTK theme installed."
 
@@ -230,9 +230,19 @@ GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
 GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
 sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
 
+# Write to settings.ini for applications that read it directly
 GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10"
-
 sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
+
+# Use gsettings to apply the themes, as this is the standard for many GTK applications
+if command -v gsettings &>/dev/null; then
+    print_success "Using gsettings to apply GTK themes."
+    sudo -u "$USER_NAME" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
+    sudo -u "$USER_NAME" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
+    print_success "✅ Themes applied with gsettings."
+else
+    print_warning "gsettings not found. Themes may not apply correctly to all applications."
+fi
 
 HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
 sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<'EOF_HYPR_VARS'
