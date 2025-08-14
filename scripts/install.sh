@@ -222,9 +222,22 @@ GTK_SETTINGS="[Settings]\ngtk-theme-name=Dracula\ngtk-icon-theme-name=Dracula\ng
 
 sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
 
-XPROFILE="$USER_HOME/.xprofile"
-sudo -u "$USER_NAME" bash -c "echo \"export GTK_THEME=Dracula\nexport ICON_THEME=Dracula\nexport XDG_CURRENT_DESKTOP=Hyprland\" >> \"$XPROFILE\""
-print_success "✅ GTK themes configured."
+HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
+sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<'EOF_HYPR_VARS'
+# Set GTK theme and icon theme
+env = GTK_THEME,Dracula
+env = ICON_THEME,Dracula
+# Set XDG desktop to Hyprland
+env = XDG_CURRENT_DESKTOP,Hyprland
+EOF_HYPR_VARS
+
+# Source the new config file in the main Hyprland config
+HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
+if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Sourced by the setup script to set GTK and icon themes\nsource = $HYPR_VARS_FILE" >> "$HYPR_CONF"
+fi
+
+print_success "✅ GTK themes configured for Hyprland."
 
 # --- Thunar Kitty custom action ---
 print_header "Setting up Thunar custom action"
