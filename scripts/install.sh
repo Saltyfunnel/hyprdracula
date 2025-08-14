@@ -155,30 +155,12 @@ copy_configs() {
 # --- Copy configs ---
 print_header "Copying configuration files"
 copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
-copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
+# This line now copies your custom Tofi config from your assets folder.
+copy_configs "$SCRIPT_DIR/assets/tofi" "$CONFIG_DIR/tofi" "Tofi"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
-
-# --- Dracula Tofi Config Override ---
-print_header "Setting up Dracula Tofi config"
-sudo -u "$USER_NAME" mkdir -p "$CONFIG_DIR/tofi"
-sudo -u "$USER_NAME" tee "$CONFIG_DIR/tofi/config" >/dev/null <<'EOF_TOFI'
-font = "JetBrainsMono Nerd Font:size=14"
-width = 60
-height = 200
-border-width = 2
-padding = 15
-corner-radius = 12
-background-color = rgba(40,42,54,0.85)
-border-color = #bd93f9
-text-color = #f8f8f2
-selection-color = #44475a
-selection-text-color = #f8f8f2
-prompt-color = #ff79c6
-EOF_TOFI
-print_success "✅ Tofi config applied."
 
 # --- Fastfetch & Starship shell integration ---
 print_header "Setting up Fastfetch and Starship"
