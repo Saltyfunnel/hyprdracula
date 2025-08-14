@@ -125,12 +125,14 @@ fi
 
 # --- AUR utilities ---
 declare -a AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus)
-# Check if the array is not empty before looping
-if [[ \${#AUR_PACKAGES[@]} -gt 0 ]]; then
-    for pkg in "\${AUR_PACKAGES[@]:-}"; do
-        print_header "Install \$pkg via AUR"
-        yay -S --noconfirm "\$pkg" || print_warning "Installation of \$pkg failed (non-fatal)."
-    done
+# Install all AUR packages at once to avoid unbound variable issues with loops.
+if [[ "\${#AUR_PACKAGES[@]}" -gt 0 ]]; then
+    print_header "Installing AUR packages..."
+    if ! yay -S --noconfirm "\${AUR_PACKAGES[@]:-}"; then
+        print_warning "Installation of some AUR packages failed (non-fatal)."
+    else
+        print_success "✅ All AUR packages installed."
+    fi
 else
     print_warning "No AUR packages to install. Skipping package installation."
 fi
