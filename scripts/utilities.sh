@@ -29,12 +29,17 @@ copy_as_user() {
     run_command "chown -R $USER_NAME:$USER_NAME \"$dest\"" "Fix ownership for $dest" "no" "yes"
 }
 
-# --- Core utilities ---
-run_command "pacman -S --noconfirm --needed waybar cliphist" "Install Waybar and Cliphist" "yes"
+# Set yay to fully automatic
+export YAY_CONFIRM=1
+
+# Install core utilities
+run_command "pacman -S --noconfirm --needed waybar" "Install Waybar" "yes"
 copy_as_user "$REPO_DIR/configs/waybar" "$CONFIG_DIR/waybar"
 
-# --- AUR utilities ---
-run_command "yay -S --noconfirm --needed tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus" "Install AUR utilities" "yes" "no"
+# Install AUR utilities non-interactively
+run_command "yay -S --noconfirm --needed --nodiffmenu --nocleanmenu --nocheck \
+    tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus" \
+    "Install AUR utilities" "yes" "no"
 
 copy_as_user "$REPO_DIR/configs/tofi" "$CONFIG_DIR/tofi"
 copy_as_user "$REPO_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch"
@@ -42,7 +47,7 @@ copy_as_user "$REPO_DIR/configs/hypr" "$CONFIG_DIR/hypr"
 copy_as_user "$REPO_DIR/configs/kitty" "$CONFIG_DIR/kitty"
 copy_as_user "$REPO_DIR/configs/dunst" "$CONFIG_DIR/dunst"
 
-# --- Add fastfetch to shell ---
+# Add fastfetch to shell
 add_fastfetch_to_shell() {
     local shell_rc="$1"
     local shell_rc_path="$USER_HOME/$shell_rc"
@@ -56,7 +61,7 @@ add_fastfetch_to_shell() {
 
 add_fastfetch_to_shell ".bashrc"
 
-# --- Starship config ---
+# Starship config
 STARSHIP_SRC="$REPO_DIR/configs/starship/starship.toml"
 STARSHIP_DEST="$CONFIG_DIR/starship.toml"
 
@@ -79,19 +84,20 @@ add_starship_to_shell() {
 
 add_starship_to_shell ".bashrc" "bash"
 
-# --- Assets ---
+# Additional utilities
+run_command "pacman -S --noconfirm --needed cliphist" "Install Cliphist" "yes"
 copy_as_user "$ASSETS_SRC/backgrounds" "$ASSETS_DEST/backgrounds"
 
-# --- Thunar Kitty custom action ---
+# Thunar Kitty custom action
 setup_thunar_kitty_action() {
-    local uca_dir="$CONFIG_DIR/Thunar"
-    local uca_file="$uca_dir/uca.xml"
+  local uca_dir="$CONFIG_DIR/Thunar"
+  local uca_file="$uca_dir/uca.xml"
 
-    mkdir -p "$uca_dir"
-    chown "$USER_NAME:$USER_NAME" "$uca_dir"
-    chmod 700 "$uca_dir"
+  mkdir -p "$uca_dir"
+  chown "$USER_NAME:$USER_NAME" "$uca_dir"
+  chmod 700 "$uca_dir"
 
-    local kitty_action_xml='
+  local kitty_action_xml='
   <action>
     <icon>utilities-terminal</icon>
     <name>Open Kitty Here</name>
@@ -102,22 +108,22 @@ setup_thunar_kitty_action() {
     <startup_notify>true</startup_notify>
   </action>'
 
-    if [ ! -f "$uca_file" ]; then
-        cat > "$uca_file" << EOF
+  if [ ! -f "$uca_file" ]; then
+    cat > "$uca_file" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <actions>
 $kitty_action_xml
 </actions>
 EOF
-        chown "$USER_NAME:$USER_NAME" "$uca_file"
-    else
-        if ! grep -q "<name>Open Kitty Here</name>" "$uca_file"; then
-            sed -i "/<\/actions>/ i\\
+    chown "$USER_NAME:$USER_NAME" "$uca_file"
+  else
+    if ! grep -q "<name>Open Kitty Here</name>" "$uca_file"; then
+      sed -i "/<\/actions>/ i\\
 $kitty_action_xml
 " "$uca_file"
-            chown "$USER_NAME:$USER_NAME" "$uca_file"
-        fi
+      chown "$USER_NAME:$USER_NAME" "$uca_file"
     fi
+  fi
 }
 
 setup_thunar_kitty_action
