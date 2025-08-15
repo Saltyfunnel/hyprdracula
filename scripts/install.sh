@@ -255,6 +255,11 @@ THEMES_DIR="$USER_HOME/.themes"
 ICONS_DIR="$USER_HOME/.icons"
 ASSETS_DIR="$SCRIPT_DIR/assets"
 
+# Check if the user's home directory exists and is a directory
+if [ ! -d "$USER_HOME" ]; then
+    print_error "User home directory '$USER_HOME' not found. Cannot proceed with user-level setup."
+fi
+
 if [ ! -f "$ASSETS_DIR/dracula-gtk-master.zip" ]; then
     print_error "Dracula GTK theme archive not found at $ASSETS_DIR/dracula-gtk-master.zip. Please download it and place it there."
 fi
@@ -343,17 +348,21 @@ EOF_GTK
 print_success "✅ GTK settings files created."
 
 # --- FIX: New, robust gsettings commands using the user's D-Bus session ---
-if command -v gsettings &>/dev/null; then
-    print_success "Using gsettings to apply GTK themes."
-    # Get the user's UID for the run directory path
-    user_uid=$(id -u "$USER_NAME")
-    # Run gsettings with the user's correct D-Bus session environment
-    # The `set` command is repeated to ensure both are applied.
-    sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME"
-    sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME"
-    print_success "✅ Themes applied with gsettings."
+# New: Get the user's UID and check it to prevent 'unbound variable' errors
+user_uid=$(id -u "$USER_NAME" 2>/dev/null || echo "")
+if [ -z "$user_uid" ]; then
+    print_warning "Could not get UID for user '$USER_NAME'. Skipping gsettings commands."
 else
-    print_warning "gsettings not found. Themes may not apply correctly to all applications."
+    if command -v gsettings &>/dev/null; then
+        print_success "Using gsettings to apply GTK themes."
+        # Run gsettings with the user's correct D-Bus session environment
+        # The `set` command is repeated to ensure both are applied.
+        sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME"
+        sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME"
+        print_success "✅ Themes applied with gsettings."
+    else
+        print_warning "gsettings not found. Themes may not apply correctly to all applications."
+    fi
 fi
 
 # --- FIX: New section to use xfconf-query to apply themes for XFCE apps like Thunar ---
@@ -423,6 +432,10 @@ fi
 print_success "✅ Thunar action configured."
 
 # --- FIX: Ensure Thunar can be restarted by providing the correct D-Bus environment ---
-run_nonfatal_command "sudo -u \"$USER_NAME\" env DBUS_SESSION_BUS_ADDRESS=\"unix:path=/run/user/$(id -u "$USER_NAME")/bus\" pkill thunar" "kill any running Thunar process"
-run_nonfatal_command "sudo -u \"$USER_NAME\" env DBUS_SESSION_BUS_ADDRESS=\"unix:path=/run/user/$(id -u "$USER_NAME")/bus\" thunar &" "start Thunar"
+if [ -z "$user_uid" ]; then
+    print_warning "Could not get UID for user '$USER_NAME'. Skipping Thunar restart."
+else
+    run_nonfatal_command "sudo -u \"$USER_NAME\" env DBUS_SESSION_BUS_ADDRESS=\"unix:path=/run/user/${user_uid}/bus\" pkill thunar" "kill any running Thunar process"
+    run_nonfatal_command "sudo -u \"$USER_NAME\" env DBUS_SESSION_BUS_ADDRESS=\"unix:path=/run/user/${user_uid}/bus\" thunar &" "start Thunar"
+fi
 print_success "\n🎉 The installation is complete! Please reboot your system to apply all changes."
