@@ -422,8 +422,7 @@ EOF_UCA
 fi
 print_success "✅ Thunar action configured."
 
-sudo -u "$USER_NAME" pkill thunar || true
-sudo -u "$USER_NAME" thunar &
-print_success "✅ Thunar restarted."
-
+# --- FIX: Ensure Thunar can be restarted by providing the correct D-Bus environment ---
+run_nonfatal_command "sudo -u \"$USER_NAME\" env DBUS_SESSION_BUS_ADDRESS=\"unix:path=/run/user/$(id -u "$USER_NAME")/bus\" pkill thunar" "kill any running Thunar process"
+run_nonfatal_command "sudo -u \"$USER_NAME\" env DBUS_SESSION_BUS_ADDRESS=\"unix:path=/run/user/$(id -u "$USER_NAME")/bus\" thunar &" "start Thunar"
 print_success "\n🎉 The installation is complete! Please reboot your system to apply all changes."
