@@ -341,6 +341,7 @@ if command -v gsettings &>/dev/null; then
     # Get the user's UID for the run directory path
     user_uid=$(id -u "$USER_NAME")
     # Run gsettings with the user's correct D-Bus session environment
+    # The `set` command is repeated to ensure both are applied.
     sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
     sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
     print_success "✅ Themes applied with gsettings."
@@ -350,7 +351,7 @@ fi
 
 HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
 sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<'EOF_HYPR_VARS'
-# Set GTK theme and icon theme
+# Set GTK theme and icon theme for Hyprland
 env = GTK_THEME,dracula-gtk
 env = ICON_THEME,Dracula
 # Set XDG desktop to Hyprland
