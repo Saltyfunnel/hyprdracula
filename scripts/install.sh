@@ -334,18 +334,19 @@ EOF_GTK
 print_success "✅ GTK settings files created."
 
 # --- FIX: New, robust gsettings commands using the user's D-Bus session ---
-# New: This entire block is now self-contained to avoid unbound variables.
-sudo -u "$USER_NAME" bash <<EOF_GSETTINGS
+print_header "Applying GTK themes with gsettings"
+user_uid=$(id -u "$USER_NAME" || true)
+if [ -z "$user_uid" ]; then
+    print_warning "Could not get UID for user '$USER_NAME'. Skipping gsettings commands."
+else
     if command -v gsettings &>/dev/null; then
-        echo "Using gsettings to apply GTK themes."
-        local user_uid=\$(id -u "\$USER_NAME")
-        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/\$user_uid/bus" gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME"
-        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/\$user_uid/bus" gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME"
-        echo "✅ Themes applied with gsettings."
+        sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME"
+        sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME"
+        print_success "✅ Themes applied with gsettings."
     else
-        echo "gsettings not found. Themes may not apply correctly to all applications."
+        print_warning "gsettings not found. Themes may not apply correctly to all applications."
     fi
-EOF_GSETTINGS
+fi
 
 # --- FIX: New section to use xfconf-query to apply themes for XFCE apps like Thunar ---
 print_header "Applying GTK theme with xfconf-query for XFCE apps"
@@ -414,17 +415,18 @@ fi
 print_success "✅ Thunar action configured."
 
 # --- FIX: Ensure Thunar can be restarted by providing the correct D-Bus environment ---
-# New: This block is now self-contained to avoid unbound variables.
-sudo -u "$USER_NAME" bash <<EOF_THUNAR
+print_header "Restarting Thunar to apply changes"
+user_uid=$(id -u "$USER_NAME" || true)
+if [ -z "$user_uid" ]; then
+    print_warning "Could not get UID for user '$USER_NAME'. Skipping Thunar restart."
+else
     if command -v thunar &>/dev/null; then
-        echo "Restarting Thunar to apply changes"
-        local user_uid=\$(id -u "\$USER_NAME")
-        env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/\$user_uid/bus" pkill thunar || true
-        env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/\$user_uid/bus" thunar &
-        echo "✅ Thunar restarted successfully."
+        sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" pkill thunar || true
+        sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" thunar &
+        print_success "✅ Thunar restarted successfully."
     else
-        echo "Thunar not found, skipping restart."
+        print_warning "Thunar not found, skipping restart."
     fi
-EOF_THUNAR
+fi
 
 print_success "\n🎉 The installation is complete! Please reboot your system to apply all changes."
