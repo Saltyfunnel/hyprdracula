@@ -263,33 +263,38 @@ if [ ! -f "$ASSETS_DIR/Dracula.zip" ]; then
 fi
 print_success "✅ Local asset files confirmed."
 
-# Corrected GTK theme installation logic
+# Updated GTK theme installation logic to be more robust
 print_success "Installing Dracula GTK theme..."
-# Clean up any previous install to prevent overwrite errors
-sudo -u "$USER_NAME" rm -rf "$THEMES_DIR/dracula-gtk" "$THEMES_DIR/dracula-gtk-master"
-sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
-sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null
-
-# Find the unzipped folder and use that name
-GTK_THEME_NAME=$(sudo -u "$USER_NAME" find "$THEMES_DIR" -maxdepth 1 -mindepth 1 -type d -name "*dracula-gtk*" -printf '%f\n' | head -n 1)
+TEMP_THEME_DIR=$(sudo -u "$USER_NAME" mktemp -d)
+sudo -u "$USER_NAME" rm -rf "$THEMES_DIR"/gtk-master
+if ! sudo -u "$USER_NAME" unzip "$ASSETS_DIR/dracula-gtk-master.zip" -d "$TEMP_THEME_DIR"; then
+    print_error "Unzipping the GTK theme failed. Please check the 'dracula-gtk-master.zip' file for corruption or download issues."
+fi
+GTK_THEME_NAME=$(sudo -u "$USER_NAME" find "$TEMP_THEME_DIR" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | head -n 1)
 if [ -z "$GTK_THEME_NAME" ]; then
-    print_error "Could not find an extracted Dracula GTK theme folder. Please check your zip file."
+    print_error "Could not find an extracted GTK theme folder inside the zip. Please check the zip file's contents."
 fi
-print_success "✅ Found GTK theme folder named: $GTK_THEME_NAME"
+print_success "✅ Found extracted GTK theme folder named: $GTK_THEME_NAME"
+sudo -u "$USER_NAME" mv "$TEMP_THEME_DIR/$GTK_THEME_NAME" "$THEMES_DIR/"
+sudo -u "$USER_NAME" rm -rf "$TEMP_THEME_DIR"
+print_success "✅ Successfully installed the GTK theme."
 
-# Corrected Icons installation logic
+# Updated Icons installation logic to be more robust
 print_success "Installing Dracula Icons..."
-# Clean up any previous install to prevent overwrite errors
-sudo -u "$USER_NAME" rm -rf "$ICONS_DIR/Dracula" "$ICONS_DIR/Dracula-*"
-sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
-sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null
-
-# Find the unzipped folder and use that name
-ICON_THEME_NAME=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" -printf '%f\n' | head -n 1)
-if [ -z "$ICON_THEME_NAME" ]; then
-    print_error "Could not find an extracted Dracula icon theme folder. Please check your zip file."
+TEMP_ICON_DIR=$(sudo -u "$USER_NAME" mktemp -d)
+sudo -u "$USER_NAME" rm -rf "$ICONS_DIR"/Dracula
+if ! sudo -u "$USER_NAME" unzip "$ASSETS_DIR/Dracula.zip" -d "$TEMP_ICON_DIR"; then
+    print_error "Unzipping the Icon theme failed. Please check the 'Dracula.zip' file for corruption or download issues."
 fi
-print_success "✅ Found Icon theme folder named: $ICON_THEME_NAME"
+ICON_THEME_NAME=$(sudo -u "$USER_NAME" find "$TEMP_ICON_DIR" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | head -n 1)
+if [ -z "$ICON_THEME_NAME" ]; then
+    print_error "Could not find an extracted icon theme folder inside the zip. Please check the zip file's contents."
+fi
+print_success "✅ Found extracted Icon theme folder named: $ICON_THEME_NAME"
+sudo -u "$USER_NAME" mv "$TEMP_ICON_DIR/$ICON_THEME_NAME" "$ICONS_DIR/"
+sudo -u "$USER_NAME" rm -rf "$TEMP_ICON_DIR"
+print_success "✅ Successfully installed the Icon theme."
+
 
 # --- The key addition: Update the icon cache to ensure icons are found by applications like Thunar. ---
 if command -v gtk-update-icon-cache &>/dev/null; then
@@ -351,10 +356,10 @@ fi
 
 
 HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
-sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<'EOF_HYPR_VARS'
+sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<EOF_HYPR_VARS
 # Set GTK theme and icon theme for Hyprland
-env = GTK_THEME,dracula-gtk
-env = ICON_THEME,Dracula
+env = GTK_THEME,$GTK_THEME_NAME
+env = ICON_THEME,$ICON_THEME_NAME
 # Set XDG desktop to Hyprland
 env = XDG_CURRENT_DESKTOP,Hyprland
 EOF_HYPR_VARS
