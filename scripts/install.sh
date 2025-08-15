@@ -217,9 +217,10 @@ copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 print_header "Setting up Fastfetch and Starship"
 # Corrected with a 'here document' to avoid quoting issues
 sudo -u "$USER_NAME" bash <<EOT
+    # Use HOME instead of USER_HOME for correct user path inside the subshell
     add_fastfetch_to_shell() {
         local shell_config="$1"
-        local shell_file="$USER_HOME/$shell_config"
+        local shell_file="$HOME/$shell_config"
         local shell_content="\n# Added by Dracula Hyprland setup script\nif command -v fastfetch &>/dev/null; then\n  fastfetch\nfi\n"
         if ! grep -q "fastfetch" "$shell_file" 2>/dev/null; then
             echo -e "$shell_content" | tee -a "$shell_file" >/dev/null
@@ -228,7 +229,7 @@ sudo -u "$USER_NAME" bash <<EOT
     add_starship_to_shell() {
         local shell_config="$1"
         local shell_type="$2"
-        local shell_file="$USER_HOME/$shell_config"
+        local shell_file="$HOME/$shell_config"
         local shell_content="\n# Added by Dracula Hyprland setup script\neval \"$(starship init $shell_type)\"\n"
         if ! grep -q "starship" "$shell_file" 2>/dev/null; then
             echo -e "$shell_content" | tee -a "$shell_file" >/dev/null
@@ -238,8 +239,8 @@ sudo -u "$USER_NAME" bash <<EOT
     add_fastfetch_to_shell ".bashrc" "bash"
     add_fastfetch_to_shell ".zshrc" "zsh"
     
-    STARSHIP_SRC="$USER_HOME/dracula-hyprland-setup/configs/starship/starship.toml"
-    STARSHIP_DEST="$USER_HOME/.config/starship.toml"
+    STARSHIP_SRC="$HOME/dracula-hyprland-setup/configs/starship/starship.toml"
+    STARSHIP_DEST="$HOME/.config/starship.toml"
     if [ -f "$STARSHIP_SRC" ]; then
         cp "$STARSHIP_SRC" "$STARSHIP_DEST" || echo "Failed to copy starship config."
     fi
@@ -313,8 +314,8 @@ fi
 print_header "Setting GTK themes in settings.ini"
 sudo -u "$USER_NAME" bash <<EOF_GTK
     # Write settings.ini for gtk-3.0
-    mkdir -p "$USER_HOME/.config/gtk-3.0"
-    cat > "$USER_HOME/.config/gtk-3.0/settings.ini" <<EOT_GTK3
+    mkdir -p "$HOME/.config/gtk-3.0"
+    cat > "$HOME/.config/gtk-3.0/settings.ini" <<EOT_GTK3
 [Settings]
 gtk-theme-name=dracula-gtk
 gtk-icon-theme-name=Dracula
@@ -322,8 +323,8 @@ gtk-font-name=JetBrainsMono 10
 EOT_GTK3
 
     # Write settings.ini for gtk-4.0
-    mkdir -p "$USER_HOME/.config/gtk-4.0"
-    cat > "$USER_HOME/.config/gtk-4.0/settings.ini" <<EOT_GTK4
+    mkdir -p "$HOME/.config/gtk-4.0"
+    cat > "$HOME/.config/gtk-4.0/settings.ini" <<EOT_GTK4
 [Settings]
 gtk-theme-name=dracula-gtk
 gtk-icon-theme-name=Dracula
