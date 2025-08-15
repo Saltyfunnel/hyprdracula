@@ -99,15 +99,13 @@ print_header "Creating and Populating the assets directory"
 ASSETS_SRC="$SCRIPT_DIR/assets"
 ASSETS_DEST="$CONFIG_DIR/assets"
 
-# Ensure the destination directory exists and is owned by the user
-run_command "mkdir -p $ASSETS_DEST" "Create $ASSETS_DEST"
-run_command "chown -R $USER_NAME:$USER_NAME $ASSETS_DEST" "Set correct ownership on $ASSETS_DEST"
-
-# Now copy the backgrounds into the correctly owned directory
-if ! sudo -u "$USER_NAME" cp -r "$ASSETS_SRC/." "$ASSETS_DEST"; then
-    print_error "Failed to copy assets to $ASSETS_DEST."
+# Check if source exists
+if [ ! -d "$ASSETS_SRC" ]; then
+    print_error "Source assets directory not found at '$ASSETS_SRC'."
 fi
-print_success "✅ Assets copied successfully."
+
+# Perform all assets operations in one command as the user
+run_command "sudo -u $USER_NAME bash -c \"mkdir -p '$ASSETS_DEST' && cp -r '$ASSETS_SRC/.' '$ASSETS_DEST'\"" "Create and copy assets with correct user permissions"
 
 # Copy other config files
 copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
@@ -122,9 +120,5 @@ print_header "Setting up Shells"
 run_command "sudo -u $USER_NAME cp -f $SCRIPT_DIR/configs/starship/starship.toml $USER_HOME/.config/starship.toml" "Copy starship config"
 run_command "echo -e '\n# Added by Dracula Hyprland setup script\neval \"\$(starship init bash)\"\nif command -v fastfetch &>/dev/null; then fastfetch; fi' >> $USER_HOME/.bashrc" "Update .bashrc"
 run_command "echo -e '\n# Added by Dracula Hyprland setup script\neval \"\$(starship init zsh)\"\nif command -v fastfetch &>/dev/null; then fastfetch; fi' >> $USER_HOME/.zshrc" "Update .zshrc"
-
-# Final verification step
-print_header "Final Verification of .config directory"
-sudo -u "$USER_NAME" ls -lR "$CONFIG_DIR"
 
 print_success "\n🎉 The installation is complete! Please reboot your system to apply all changes."
