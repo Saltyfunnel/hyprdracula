@@ -175,43 +175,38 @@ copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
-# FIX: Added line to copy Wofi configuration files
 copy_configs "$SCRIPT_DIR/configs/wofi" "$CONFIG_DIR/wofi" "Wofi"
 
+# FIX: Rewrote this section to use a here-document for a more robust and isolated shell environment.
 print_header "Setting up Fastfetch and Starship"
-# The 'EOT' here-document is now quoted to prevent variable expansion by the root shell.
-# This ensures that `$HOME` is correctly evaluated by the target user's shell.
-sudo -u "$USER_NAME" bash -c "
-    add_fastfetch_to_shell() {
-        local shell_config=\"$1\"
-        local shell_file=\"\$HOME/\$shell_config\"
-        local shell_content=\"\\n# Added by Dracula Hyprland setup script\\nif command -v fastfetch &>/dev/null; then\\n  fastfetch\\nfi\\n\"
-        if ! grep -q \"fastfetch\" \"\$shell_file\" 2>/dev/null; then
-            echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
+sudo -u "$USER_NAME" HOME="$USER_HOME" bash <<'EOF_SHELL_SETUP'
+    # Define a helper function to add a command to a shell's rc file
+    add_to_shell() {
+        local shell_file="$1"
+        local content_marker="$2"
+        local content_to_add="$3"
+        local shell_config="$HOME/$shell_file"
+        if [ ! -f "$shell_config" ] || ! grep -q "$content_marker" "$shell_config"; then
+            echo -e "$content_to_add" >> "$shell_config"
         fi
     }
-    add_starship_to_shell() {
-        local shell_config=\"$1\"
-        local shell_type=\"$2\"
-        local shell_file=\"\$HOME/\$shell_config\"
-        local shell_content=\"\\n# Added by Dracula Hyprland setup script\\neval \\\"\\\$(starship init \$shell_type)\\\"\\n\"
-        if ! grep -q \"starship\" \"\$shell_file\" 2>/dev/null; then
-            echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
-        fi
-    }
-    
-    add_fastfetch_to_shell \".bashrc\" \"bash\"
-    add_fastfetch_to_shell \".zshrc\" \"zsh\"
-    
-    STARSHIP_SRC=\"$USER_HOME/dracula-hyprland-setup/configs/starship/starship.toml\"
-    STARSHIP_DEST=\"$USER_HOME/.config/starship.toml\"
-    if [ -f \"\$STARSHIP_SRC\" ]; then
-        cp \"\$STARSHIP_SRC\" \"\$STARSHIP_DEST\" || echo \"Failed to copy starship config.\"
+
+    # Set up Fastfetch in .bashrc and .zshrc
+    add_to_shell ".bashrc" "fastfetch" "\n# Added by Dracula Hyprland setup script\nif command -v fastfetch &>/dev/null; then\n  fastfetch\nfi"
+    add_to_shell ".zshrc" "fastfetch" "\n# Added by Dracula Hyprland setup script\nif command -v fastfetch &>/dev/null; then\n  fastfetch\nfi"
+
+    # Set up Starship in .bashrc and .zshrc
+    STARSHIP_SRC="$HOME/dracula-hyprland-setup/configs/starship/starship.toml"
+    STARSHIP_DEST="$HOME/.config/starship.toml"
+    if [ -f "$STARSHIP_SRC" ]; then
+        mkdir -p "$(dirname "$STARSHIP_DEST")"
+        cp "$STARSHIP_SRC" "$STARSHIP_DEST"
     fi
-    add_starship_to_shell \".bashrc\" \"bash\"
-    add_starship_to_shell \".zshrc\" \"zsh\"
-"
+    add_to_shell ".bashrc" "starship" "\n# Added by Dracula Hyprland setup script\neval \"\$(starship init bash)\""
+    add_to_shell ".zshrc" "starship" "\n# Added by Dracula Hyprland setup script\neval \"\$(starship init zsh)\""
+EOF_SHELL_SETUP
 print_success "✅ Shell integrations complete."
+
 
 # --- Setting up GTK themes and icons from local zip files ---
 print_header "Setting up GTK themes and icons from local zip files"
