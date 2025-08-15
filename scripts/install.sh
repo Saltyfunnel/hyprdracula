@@ -182,9 +182,10 @@ print_success "✅ Local asset files confirmed."
 print_success "Installing Dracula GTK theme..."
 # Clean up any previous install to prevent overwrite errors
 sudo -u "$USER_NAME" rm -rf "$THEMES_DIR/dracula-gtk"
-# Unzip, but only proceed if the unzip command was successful
+# Unzip the file
+sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
 if sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null; then
-    # Find the unzipped folder and rename it correctly
+    # Find the unzipped folder and rename it correctly to 'dracula-gtk'
     UNZIPPED_GTK_DIR=$(sudo -u "$USER_NAME" find "$THEMES_DIR" -maxdepth 1 -mindepth 1 -type d -name "*dracula-gtk*" | head -n 1)
     if [ -n "$UNZIPPED_GTK_DIR" ] && [ "$(basename "$UNZIPPED_GTK_DIR")" != "dracula-gtk" ]; then
         print_success "Renaming '$(basename "$UNZIPPED_GTK_DIR")' to 'dracula-gtk'..."
@@ -203,6 +204,7 @@ print_success "✅ Dracula GTK theme installation completed."
 print_success "Installing Dracula Icons..."
 # Clean up any previous install to prevent overwrite errors
 sudo -u "$USER_NAME" rm -rf "$ICONS_DIR/Dracula"
+sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
 # Unzip, but only proceed if the unzip command was successful
 if sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null; then
     # Find the unzipped folder and rename it correctly
