@@ -314,10 +314,14 @@ sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
 GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10"
 sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
 
+# --- FIX: New, robust gsettings commands using the user's D-Bus session ---
 if command -v gsettings &>/dev/null; then
     print_success "Using gsettings to apply GTK themes."
-    sudo -u "$USER_NAME" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
-    sudo -u "$USER_NAME" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
+    # Get the user's UID for the run directory path
+    local user_uid=$(id -u "$USER_NAME")
+    # Run gsettings with the user's correct D-Bus session environment
+    sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
+    sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
     print_success "✅ Themes applied with gsettings."
 else
     print_warning "gsettings not found. Themes may not apply correctly to all applications."
