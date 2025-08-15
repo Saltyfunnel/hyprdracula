@@ -185,15 +185,16 @@ sudo -u "$USER_NAME" rm -rf "$THEMES_DIR/dracula-gtk"
 # Unzip the file
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
 if sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null; then
-    # Find the unzipped folder and rename it correctly to 'dracula-gtk'
-    UNZIPPED_GTK_DIR=$(sudo -u "$USER_NAME" find "$THEMES_DIR" -maxdepth 1 -mindepth 1 -type d -name "*dracula-gtk*" | head -n 1)
-    if [ -n "$UNZIPPED_GTK_DIR" ] && [ "$(basename "$UNZIPPED_GTK_DIR")" != "dracula-gtk" ]; then
-        print_success "Renaming '$(basename "$UNZIPPED_GTK_DIR")' to 'dracula-gtk'..."
-        if ! sudo -u "$USER_NAME" mv "$UNZIPPED_GTK_DIR" "$THEMES_DIR/dracula-gtk"; then
+    # Correctly rename the `gtk-master` folder to `dracula-gtk`
+    if [ -d "$THEMES_DIR/gtk-master" ]; then
+        print_success "Renaming 'gtk-master' to 'dracula-gtk'..."
+        if ! sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/dracula-gtk"; then
             print_warning "Failed to rename GTK theme folder. Theme may not appear correctly."
         else
             print_success "✅ GTK theme folder renamed to dracula-gtk."
         fi
+    else
+        print_warning "Expected 'gtk-master' folder not found. Theme may not appear correctly."
     fi
 else
     print_warning "Failed to unzip GTK theme. Please check your zip file."
