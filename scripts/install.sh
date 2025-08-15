@@ -1,6 +1,6 @@
 #!/bin/bash
-# A one-stop script for installing a Dracula-themed Hyprland setup on Arch Linux.
-# This script handles both system-level and user-level tasks in a single run.
+# A one-stop script for installing a Dracula-themed Hyprland setup.
+# This version uses a more robust method to ensure file ownership is correct.
 set -euo pipefail
 
 # --- Global Helper Functions ---
@@ -12,164 +12,104 @@ print_success() {
     echo -e "\e[32m$1\e[0m"
 }
 
-print_warning() {
-    echo -e "\e[33mWarning: $1\e[0m" >&2
-}
-
 print_error() {
     echo -e "\e[31mError: $1\e[0m" >&2
     exit 1
 }
 
-print_bold_blue() {
-    echo -e "\e[1m\e[34m$1\e[0m"
-}
-
-# This function is used for critical commands that should halt the script on failure.
-run_critical_command() {
-    local command="$1"
-    local description="$2"
-    local confirm_needed="${3:-"yes"}"
-
-    if [ "$confirm_needed" == "yes" ] && [ "$CONFIRMATION" == "yes" ]; then
-        read -p "Install '$description'? Press Enter to continue..."
-    fi
-
-    echo -e "\nRunning: $command"
-    if ! eval "$command"; then
-        print_error "Failed to '$description'."
-    fi
-    print_success "✅ Success: '$description'"
-}
-
 # --- Main Execution Logic ---
-
 # Check if the script is run as root
 if [ "$EUID" -ne 0 ]; then
     print_error "This script must be run as root. Please run with 'sudo bash $0'."
 fi
 
 # Define variables
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 CONFIG_DIR="$USER_HOME/.config"
-CONFIRMATION="yes"
 
-if [[ $# -eq 1 && "$1" == "--noconfirm" ]]; then
-    CONFIRMATION="no"
-elif [[ $# -gt 0 ]]; then
-    echo "Usage: $0 [--noconfirm]"
-    exit 1
+if [ -z "$USER_NAME" ]; then
+    print_error "Could not determine the current user. Please run the script from your user account with 'sudo'."
 fi
-
-# --- Pre-run checks ---
-print_header "Running Pre-run Checks"
-
-if [ ! -d "$SCRIPT_DIR/configs" ]; then
-    print_error "Required 'configs' directory not found in the script's directory: $SCRIPT_DIR.
-    Please ensure the entire repository is cloned and you are running the script from its root directory."
+if [ -z "$USER_HOME" ]; then
+    print_error "Could not determine the user's home directory. This is a critical error."
 fi
-print_success "✅ File structure confirmed."
-
-if ! command -v git &>/dev/null; then
-    print_error "git is not installed. Please install it with 'sudo pacman -S git'."
-fi
-if ! command -v curl &>/dev/null; then
-    print_error "curl is not installed. Please install it with 'sudo pacman -S curl'."
-fi
-print_success "✅ Required tools (git, curl) confirmed."
 
 # --- System-level tasks ---
 print_header "Starting System-Level Setup"
 
 # Update system and install required packages with pacman
-if [ "$CONFIRMATION" == "yes" ]; then
-    read -p "Update system and install packages? Press Enter to continue..."
-fi
-PACKAGES=(
-    # Core system tools and dependencies
-    git base-devel
-    pipewire wireplumber pamixer brightnessctl
-    starship
+run_command() {
+    local cmd="$1"
+    local desc="$2"
+    echo -e "\nRunning: $desc"
+    if ! eval "$cmd"; then
+        print_error "Failed to run command: $desc"
+    fi
+    print_success "✅ $desc"
+}
 
-    # Fonts
-    ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
-
-    # Display Manager & Core Applications
-    sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
-    
-    # File Manager & Plugins
-    thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
-
-    # Desktop Services & Protocols
-    gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
-    
-    # Hyprland specific components
-    waybar wofi hyprland hyprpaper hyprlock hypridle
-)
-if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
-    print_error "Failed to install system packages."
-fi
-print_success "✅ System updated and packages installed."
+run_command "pacman -Syu --noconfirm git base-devel pipewire wireplumber pamixer brightnessctl starship ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome waybar wofi hyprland hyprpaper hyprlock hypridle" "Update system and install packages"
 
 # --- GPU Driver Installation ---
 print_header "Installing GPU Drivers"
 GPU_INFO=$(lspci | grep -Ei "VGA|3D")
-
 if echo "$GPU_INFO" | grep -qi "nvidia"; then
-    print_bold_blue "NVIDIA GPU detected."
-    run_critical_command "pacman -S --noconfirm nvidia nvidia-utils nvidia-settings" "Install NVIDIA drivers"
+    run_command "pacman -S --noconfirm nvidia nvidia-utils nvidia-settings" "Install NVIDIA drivers"
 elif echo "$GPU_INFO" | grep -qi "amd"; then
-    print_bold_blue "AMD GPU detected."
-    run_critical_command "pacman -S --noconfirm xf86-video-amdgpu vulkan-radeon libva-mesa-driver mesa-vdpau" "Install AMD drivers"
+    run_command "pacman -S --noconfirm xf86-video-amdgpu vulkan-radeon libva-mesa-driver mesa-vdpau" "Install AMD drivers"
 elif echo "$GPU_INFO" | grep -qi "intel"; then
-    print_bold_blue "Intel GPU detected."
-    run_critical_command "pacman -S --noconfirm mesa libva-intel-driver intel-media-driver vulkan-intel" "Install Intel drivers"
+    run_command "pacman -S --noconfirm mesa libva-intel-driver intel-media-driver vulkan-intel" "Install Intel drivers"
 else
-    print_warning "No supported GPU detected. Info: $GPU_INFO"
-    if [ "$CONFIRMATION" == "yes" ]; then
-        read -p "Try installing NVIDIA drivers anyway? [Y/n]: " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            run_critical_command "pacman -S --noconfirm nvidia nvidia-utils nvidia-settings" "Install NVIDIA drivers (forced)"
-        fi
-    fi
+    echo "Warning: No supported GPU detected."
 fi
-print_success "✅ GPU driver installation complete."
 
-# Enable services
-if [ "$CONFIRMATION" == "yes" ]; then
-    read -p "Enable system services? Press Enter to continue..."
-fi
-systemctl enable --now polkit.service
-systemctl enable sddm.service
-print_success "✅ System services enabled."
+run_command "systemctl enable --now polkit.service" "Enable polkit service"
+run_command "systemctl enable sddm.service" "Enable sddm service"
 
 print_success "\n✅ System-level setup is complete! Now starting user-level setup."
 
-# --- User-level tasks (executed as the user via sudo) ---
+# --- User-level tasks (executed with sudo and corrected ownership) ---
 print_header "Starting User-Level Setup"
 
+# This function copies files and immediately sets ownership
 copy_configs() {
     local source_dir="$1"
     local dest_dir="$2"
     local config_name="$3"
 
-    print_success "Copying $config_name from '$source_dir' to '$dest_dir'."
-    if ! sudo -u "$USER_NAME" mkdir -p "$dest_dir"; then
-        print_warning "Failed to create destination directory for $config_name: '$dest_dir'."
-        return 1
+    print_success "Copying $config_name..."
+    # Create the directory with root and then change ownership
+    if ! mkdir -p "$dest_dir"; then
+        print_error "Failed to create destination directory for $config_name: '$dest_dir'."
     fi
+    if ! chown -R "$USER_NAME:$USER_NAME" "$dest_dir"; then
+        print_error "Failed to change ownership of '$dest_dir' to $USER_NAME."
+    fi
+    # Now copy as the user
     if ! sudo -u "$USER_NAME" cp -r "$source_dir/." "$dest_dir"; then
-        print_warning "Failed to copy $config_name."
-        return 1
+        print_error "Failed to copy $config_name."
     fi
     print_success "✅ Copied $config_name."
-    return 0
 }
 
-print_header "Copying configuration files"
+# The key fix: This is the critical section for the assets folder
+print_header "Creating and Populating the assets directory"
+ASSETS_SRC="$SCRIPT_DIR/assets"
+ASSETS_DEST="$CONFIG_DIR/assets"
+
+# Ensure the destination directory exists and is owned by the user
+run_command "mkdir -p $ASSETS_DEST" "Create $ASSETS_DEST"
+run_command "chown -R $USER_NAME:$USER_NAME $ASSETS_DEST" "Set correct ownership on $ASSETS_DEST"
+
+# Now copy the backgrounds into the correctly owned directory
+if ! sudo -u "$USER_NAME" cp -r "$ASSETS_SRC/." "$ASSETS_DEST"; then
+    print_error "Failed to copy assets to $ASSETS_DEST."
+fi
+print_success "✅ Assets copied successfully."
+
+# Copy other config files
 copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
@@ -177,243 +117,14 @@ copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 copy_configs "$SCRIPT_DIR/configs/wofi" "$CONFIG_DIR/wofi" "Wofi"
 
-# FIX: Rewrote this section to use a here-document for a more robust and isolated shell environment.
-print_header "Setting up Fastfetch and Starship"
-sudo -u "$USER_NAME" HOME="$USER_HOME" bash <<'EOF_SHELL_SETUP'
-    # Define a helper function to add a command to a shell's rc file
-    add_to_shell() {
-        local shell_file="$1"
-        local content_marker="$2"
-        local content_to_add="$3"
-        local shell_config="$HOME/$shell_file"
-        if [ ! -f "$shell_config" ] || ! grep -q "$content_marker" "$shell_config"; then
-            echo -e "$content_to_add" >> "$shell_config"
-        fi
-    }
+# Update shell configs for Starship and Fastfetch
+print_header "Setting up Shells"
+run_command "sudo -u $USER_NAME cp -f $SCRIPT_DIR/configs/starship/starship.toml $USER_HOME/.config/starship.toml" "Copy starship config"
+run_command "echo -e '\n# Added by Dracula Hyprland setup script\neval \"\$(starship init bash)\"\nif command -v fastfetch &>/dev/null; then fastfetch; fi' >> $USER_HOME/.bashrc" "Update .bashrc"
+run_command "echo -e '\n# Added by Dracula Hyprland setup script\neval \"\$(starship init zsh)\"\nif command -v fastfetch &>/dev/null; then fastfetch; fi' >> $USER_HOME/.zshrc" "Update .zshrc"
 
-    # Set up Fastfetch in .bashrc and .zshrc
-    add_to_shell ".bashrc" "fastfetch" "\n# Added by Dracula Hyprland setup script\nif command -v fastfetch &>/dev/null; then\n  fastfetch\nfi"
-    add_to_shell ".zshrc" "fastfetch" "\n# Added by Dracula Hyprland setup script\nif command -v fastfetch &>/dev/null; then\n  fastfetch\nfi"
-
-    # Set up Starship in .bashrc and .zshrc
-    STARSHIP_SRC="$HOME/dracula-hyprland-setup/configs/starship/starship.toml"
-    STARSHIP_DEST="$HOME/.config/starship.toml"
-    if [ -f "$STARSHIP_SRC" ]; then
-        mkdir -p "$(dirname "$STARSHIP_DEST")"
-        cp "$STARSHIP_SRC" "$STARSHIP_DEST"
-    fi
-    add_to_shell ".bashrc" "starship" "\n# Added by Dracula Hyprland setup script\neval \"\$(starship init bash)\""
-    add_to_shell ".zshrc" "starship" "\n# Added by Dracula Hyprland setup script\neval \"\$(starship init zsh)\""
-EOF_SHELL_SETUP
-print_success "✅ Shell integrations complete."
-
-# --- Setting up GTK themes and icons from local zip files ---
-print_header "Setting up GTK themes and icons from local zip files"
-THEMES_DIR="$USER_HOME/.themes"
-ICONS_DIR="$USER_HOME/.icons"
-ASSETS_DIR="$SCRIPT_DIR/assets"
-
-# Check if the user's home directory exists and is a directory
-if [ ! -d "$USER_HOME" ]; then
-    print_error "User home directory '$USER_HOME' not found. Cannot proceed with user-level setup."
-fi
-
-if [ ! -f "$ASSETS_DIR/dracula-gtk-master.zip" ]; then
-    print_error "Dracula GTK theme archive not found at $ASSETS_DIR/dracula-gtk-master.zip. Please download it and place it there."
-fi
-if [ ! -f "$ASSETS_DIR/Dracula.zip" ]; then
-    print_error "Dracula Icons archive not found at $ASSETS_DIR/Dracula.zip. Please download it and place it there."
-fi
-print_success "✅ Local asset files confirmed."
-
-# Updated GTK theme installation logic to be more robust
-print_success "Installing Dracula GTK theme..."
-TEMP_THEME_DIR=$(sudo -u "$USER_NAME" mktemp -d)
-sudo -u "$USER_NAME" rm -rf "$THEMES_DIR"/gtk-master
-if ! sudo -u "$USER_NAME" unzip "$ASSETS_DIR/dracula-gtk-master.zip" -d "$TEMP_THEME_DIR"; then
-    print_error "Unzipping the GTK theme failed. Please check the 'dracula-gtk-master.zip' file for corruption or download issues."
-fi
-GTK_THEME_NAME=$(sudo -u "$USER_NAME" find "$TEMP_THEME_DIR" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | head -n 1)
-if [ -z "$GTK_THEME_NAME" ]; then
-    print_error "The 'dracula-gtk-master.zip' file did not contain a valid theme directory. Please check its contents and re-run the script."
-fi
-print_success "✅ Found extracted GTK theme folder named: $GTK_THEME_NAME"
-# New: Ensure the destination directory exists before moving the files
-if ! sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"; then
-    print_error "Failed to create destination directory for GTK theme."
-fi
-if ! sudo -u "$USER_NAME" mv "$TEMP_THEME_DIR/$GTK_THEME_NAME" "$THEMES_DIR/"; then
-    print_error "Failed to move the extracted GTK theme folder into the user's .themes directory."
-fi
-sudo -u "$USER_NAME" rm -rf "$TEMP_THEME_DIR"
-print_success "✅ Successfully installed the GTK theme."
-
-# Updated Icons installation logic to be more robust
-print_success "Installing Dracula Icons..."
-TEMP_ICON_DIR=$(sudo -u "$USER_NAME" mktemp -d)
-sudo -u "$USER_NAME" rm -rf "$ICONS_DIR"/Dracula
-if ! sudo -u "$USER_NAME" unzip "$ASSETS_DIR/Dracula.zip" -d "$TEMP_ICON_DIR"; then
-    print_error "Unzipping the Icon theme failed. Please check the 'Dracula.zip' file for corruption or download issues."
-fi
-ICON_THEME_NAME=$(sudo -u "$USER_NAME" find "$TEMP_ICON_DIR" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | head -n 1)
-if [ -z "$ICON_THEME_NAME" ]; then
-    print_error "The 'Dracula.zip' file did not contain a valid icon directory. Please check its contents and re-run the script."
-fi
-print_success "✅ Found extracted Icon theme folder named: $ICON_THEME_NAME"
-# New: Ensure the destination directory exists before moving the files
-if ! sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"; then
-    print_error "Failed to create destination directory for Icon theme."
-fi
-if ! sudo -u "$USER_NAME" mv "$TEMP_ICON_DIR/$ICON_THEME_NAME" "$ICONS_DIR/"; then
-    print_error "Failed to move the extracted Icon theme folder into the user's .icons directory."
-fi
-sudo -u "$USER_NAME" rm -rf "$TEMP_ICON_DIR"
-print_success "✅ Successfully installed the Icon theme."
-
-
-# --- The key addition: Update the icon cache to ensure icons are found by applications like Thunar. ---
-if command -v gtk-update-icon-cache &>/dev/null; then
-    print_success "Updating the GTK icon cache for a smooth user experience..."
-    sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/$ICON_THEME_NAME" || true
-else
-    print_warning "gtk-update-icon-cache not found. Icons may not appear correctly until a reboot."
-fi
-
-# New, robust way to write settings.ini using here-documents
-print_header "Setting GTK themes in settings.ini"
-# The 'EOF_GTK' here-document is now quoted to prevent variable expansion by the root shell.
-# This ensures that `$HOME` is correctly evaluated by the target user's shell.
-sudo -u "$USER_NAME" HOME="$USER_HOME" bash <<EOF_GTK
-    # Write settings.ini for gtk-3.0
-    mkdir -p "\$HOME/.config/gtk-3.0"
-    cat > "\$HOME/.config/gtk-3.0/settings.ini" <<EOT_GTK3
-[Settings]
-gtk-theme-name=$GTK_THEME_NAME
-gtk-icon-theme-name=$ICON_THEME_NAME
-gtk-font-name=JetBrainsMono 10
-EOT_GTK3
-
-    # Write settings.ini for gtk-4.0
-    mkdir -p "\$HOME/.config/gtk-4.0"
-    cat > "\$HOME/.config/gtk-4.0/settings.ini" <<EOT_GTK4
-[Settings]
-gtk-theme-name=$GTK_THEME_NAME
-gtk-icon-theme-name=$ICON_THEME_NAME
-gtk-font-name=JetBrainsMono 10
-EOT_GTK4
-EOF_GTK
-print_success "✅ GTK settings files created."
-
-# --- FIX: GSettings and Thunar restart block now uses variables correctly ---
-print_header "Applying GTK themes with gsettings and restarting Thunar"
-sudo -u "$USER_NAME" bash <<EOF_GSETTINGS
-    set -euo pipefail
-    
-    # Get the user's UID and DBUS path in the correct context
-    USER_UID=\$(id -u)
-    DBUS_PATH="unix:path=/run/user/\${USER_UID}/bus"
-    
-    # GSettings commands
-    if command -v gsettings &>/dev/null; then
-        echo 'Using gsettings to apply GTK themes.'
-        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME"
-        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME"
-        echo '✅ Themes applied with gsettings.'
-    else
-        echo 'gsettings not found. Themes may not apply correctly to all applications.'
-    fi
-    
-    # Thunar restart commands
-    if command -v thunar &>/dev/null; then
-        echo 'Restarting Thunar to apply changes'
-        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" pkill thunar || true
-        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" thunar &
-        echo '✅ Thunar restarted successfully.'
-    else
-        echo 'Thunar not found, skipping restart.'
-    fi
-EOF_GSETTINGS
-
-# --- FIX: New section to use xfconf-query to apply themes for XFCE apps like Thunar ---
-print_header "Applying GTK theme with xfconf-query for XFCE apps"
-if command -v xfconf-query &>/dev/null; then
-    sudo -u "$USER_NAME" xfconf-query -c xsettings -p /Net/ThemeName -s "$GTK_THEME_NAME" --create -t string
-    sudo -u "$USER_NAME" xfconf-query -c xsettings -p /Net/IconThemeName -s "$ICON_THEME_NAME" --create -t string
-    print_success "✅ Themes applied with xfconf-query."
-else
-    print_warning "xfconf-query not found. Themes may not apply correctly to all XFCE applications."
-fi
-
-
-HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
-sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<EOF_HYPR_VARS
-# Set GTK theme and icon theme for Hyprland
-env = GTK_THEME,$GTK_THEME_NAME
-env = ICON_THEME,$ICON_THEME_NAME
-# Set XDG desktop to Hyprland
-env = XDG_CURRENT_DESKTOP,Hyprland
-EOF_HYPR_VARS
-
-HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
-if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; then
-    sudo -u "$USER_NAME" echo -e "\n# Sourced by the setup script to set GTK and icon themes\nsource = $HYPR_VARS_FILE" >> "$HYPR_CONF"
-fi
-
-# Apply the new wallpaper and launcher configs
-print_header "Updating Hyprland and Waybar configs for Pacman packages"
-sudo -u "$USER_NAME" sed -i 's/^exec-once = swww-daemon$/exec-once = hyprpaper/' "$CONFIG_DIR/hypr/hyprland.conf"
-sudo -u "$USER_NAME" sed -i 's/^bind = \$mainMod, R, exec, tofi-drun$/bind = \$mainMod, R, exec, wofi --show drun/' "$CONFIG_DIR/hypr/hyprland.conf"
-sudo -u "$USER_NAME" sed -i 's/"swww"/"hyprpaper"/' "$CONFIG_DIR/waybar/config"
-sudo -u "$USER_NAME" sed -i 's/swww.js//' "$CONFIG_DIR/waybar/config"
-sudo -u "$USER_NAME" sed -i 's/\.swww {/\.hyprpaper {/' "$CONFIG_DIR/waybar/style.css"
-sudo -u "$USER_NAME" sed -i 's/swww-next.sh/hyprpaper-next.sh/' "$CONFIG_DIR/waybar/config"
-print_success "✅ Hyprland and Waybar configs updated to use wofi and hyprpaper."
-
-# --- NEW: Final and robust wallpaper install block ---
-print_header "Creating and Verifying Wallpapers Directory"
-WALLPAPER_SRC="$SCRIPT_DIR/assets/backgrounds"
-WALLPAPER_DEST="$CONFIG_DIR/assets/backgrounds"
-
-print_bold_blue "Attempting to create destination directory: $WALLPAPER_DEST"
-# Use 'install -d' for more reliable directory creation with correct user permissions
-sudo -u "$USER_NAME" install -d "$WALLPAPER_DEST"
-
-# Verify the directory was created
-if [ -d "$WALLPAPER_DEST" ]; then
-    print_success "✅ Destination directory successfully created at '$WALLPAPER_DEST'."
-else
-    print_error "Failed to create destination directory '$WALLPAPER_DEST'."
-fi
-
-print_bold_blue "Attempting to copy backgrounds from '$WALLPAPER_SRC' to '$WALLPAPER_DEST'."
-if ! sudo -u "$USER_NAME" cp -r "$WALLPAPER_SRC/." "$WALLPAPER_DEST"; then
-    print_error "Failed to copy backgrounds."
-fi
-print_success "✅ Wallpapers copied successfully."
-# --- END NEW BLOCK ---
-
-print_header "Setting up Thunar custom action"
-UCA_DIR="$CONFIG_DIR/Thunar"
-UCA_FILE="$UCA_DIR/uca.xml"
-sudo -u "$USER_NAME" mkdir -p "$UCA_DIR"
-sudo -u "$USER_NAME" chmod 700 "$UCA_DIR"
-
-if [ ! -f "$UCA_FILE" ]; then
-    sudo -u "$USER_NAME" tee "$UCA_FILE" >/dev/null <<'EOF_UCA'
-<?xml version="1.0" encoding="UTF-8"?>
-<actions>
-    <action>
-        <icon>utilities-terminal</icon>
-        <name>Open Kitty Here</name>
-        <command>kitty --directory=%d</command>
-        <description>Open kitty terminal in the current folder</description>
-        <patterns>*</patterns>
-        <directories_only>true</directories_only>
-        <startup_notify>true</startup_notify>
-    </action>
-</actions>
-EOF_UCA
-fi
-print_success "✅ Thunar action configured."
+# Final verification step
+print_header "Final Verification of .config directory"
+sudo -u "$USER_NAME" ls -lR "$CONFIG_DIR"
 
 print_success "\n🎉 The installation is complete! Please reboot your system to apply all changes."
