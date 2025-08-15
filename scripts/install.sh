@@ -207,7 +207,6 @@ sudo -u "$USER_NAME" HOME="$USER_HOME" bash <<'EOF_SHELL_SETUP'
 EOF_SHELL_SETUP
 print_success "✅ Shell integrations complete."
 
-
 # --- Setting up GTK themes and icons from local zip files ---
 print_header "Setting up GTK themes and icons from local zip files"
 THEMES_DIR="$USER_HOME/.themes"
@@ -369,8 +368,6 @@ sudo -u "$USER_NAME" sed -i 's/swww.js//' "$CONFIG_DIR/waybar/config"
 sudo -u "$USER_NAME" sed -i 's/\.swww {/\.hyprpaper {/' "$CONFIG_DIR/waybar/style.css"
 sudo -u "$USER_NAME" sed -i 's/swww-next.sh/hyprpaper-next.sh/' "$CONFIG_DIR/waybar/config"
 print_success "✅ Hyprland and Waybar configs updated to use wofi and hyprpaper."
-
-print_success "✅ GTK themes and icons configured for Hyprland."
 
 # --- NEW: Final and robust wallpaper install block ---
 print_header "Creating and Verifying Wallpapers Directory"
