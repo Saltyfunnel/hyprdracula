@@ -165,8 +165,18 @@ copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/wofi" "$CONFIG_DIR/wofi" "Wofi"
-# The new line to copy the Starship configuration file.
-copy_configs "$SCRIPT_DIR/configs/starship" "$CONFIG_DIR/starship" "Starship"
+
+# Copy the starship.toml file to the root of the .config directory
+print_success "Copying starship.toml to $CONFIG_DIR/starship.toml"
+if [ -f "$SCRIPT_DIR/configs/starship/starship.toml" ]; then
+    if sudo -u "$USER_NAME" cp "$SCRIPT_DIR/configs/starship/starship.toml" "$CONFIG_DIR/starship.toml"; then
+        print_success "✅ Copied starship.toml to ~/.config/starship.toml."
+    else
+        print_warning "Failed to copy starship.toml. The default configuration will be used."
+    fi
+else
+    print_warning "starship.toml not found in the source directory. The default configuration will be used."
+fi
 
 
 # --- Setting up GTK themes and icons from local zip files ---
@@ -275,19 +285,33 @@ sudo -u "$USER_NAME" bash <<EOF_GSETTINGS
 EOF_GSETTINGS
 # --- End of new block ---
 
-# Configure starship prompt
-print_header "Configuring Starship prompt"
+# Configure starship and fastfetch prompt
+print_header "Configuring Starship and Fastfetch prompt"
 if [ -f "$USER_HOME/.bashrc" ]; then
+    # Starship
     if ! sudo -u "$USER_NAME" grep -q "eval \"\$(starship init bash)\"" "$USER_HOME/.bashrc"; then
         sudo -u "$USER_NAME" echo -e "\n# Starship prompt\neval \"\$(starship init bash)\"" >> "$USER_HOME/.bashrc"
         print_success "✅ Added starship to .bashrc."
     else
         print_success "✅ Starship already configured in .bashrc, skipping."
     fi
+
+    # Fastfetch
+    if ! sudo -u "$USER_NAME" grep -q "fastfetch" "$USER_HOME/.bashrc"; then
+        sudo -u "$USER_NAME" echo -e "\n# Run fastfetch on terminal startup\nfastfetch" >> "$USER_HOME/.bashrc"
+        print_success "✅ Added fastfetch to .bashrc."
+    else
+        print_success "✅ Fastfetch already configured in .bashrc, skipping."
+    fi
 else
-    print_warning ".bashrc not found, skipping starship configuration. Please add 'eval \"\$(starship init bash)\"' to your shell's config file."
+    print_warning ".bashrc not found, skipping starship and fastfetch configuration. Please add them to your shell's config file."
 fi
 
+# We are going to make sure that the hyprland.conf file sources all of the necessary configs that we are providing,
+# and also launches the required apps that we installed with pacman.
+print_header "Updating hyprland.conf with necessary 'exec-once' commands and keybindings"
+HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
+# Sourced by the setup script to set GTK and icon themes
 HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
 sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<'EOF_HYPR_VARS'
 # Set GTK theme and icon theme
@@ -296,12 +320,6 @@ env = ICON_THEME,Dracula
 # Set XDG desktop to Hyprland
 env = XDG_CURRENT_DESKTOP,Hyprland
 EOF_HYPR_VARS
-
-# We are going to make sure that the hyprland.conf file sources all of the necessary configs that we are providing,
-# and also launches the required apps that we installed with pacman.
-print_header "Updating hyprland.conf with necessary 'exec-once' commands and keybindings"
-HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
-# Sourced by the setup script to set GTK and icon themes
 if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; then
     sudo -u "$USER_NAME" echo -e "\n# Sourced by the setup script to set GTK and icon themes\nsource = $HYPR_VARS_FILE" >> "$HYPR_CONF"
 fi
@@ -320,10 +338,6 @@ fi
 # Launch hypridle for power management and locking
 if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = hypridle" "$HYPR_CONF"; then
     sudo -u "$USER_NAME" echo -e "\n# Launch hypridle for power management and locking\nexec-once = hypridle" >> "$HYPR_CONF"
-fi
-# Launch Fastfetch
-if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = kitty -e fastfetch" "$HYPR_CONF"; then
-    sudo -u "$USER_NAME" echo -e "\n# Launch Fastfetch in kitty terminal on startup\nexec-once = kitty -e fastfetch" >> "$HYPR_CONF"
 fi
 # Wofi Keybinding
 if [ -f "$HYPR_CONF" ] && ! grep -q "bind = \$mainMod, D, exec, wofi --show drun" "$HYPR_CONF"; then
