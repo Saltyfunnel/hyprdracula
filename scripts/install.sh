@@ -270,17 +270,12 @@ sudo -u "$USER_NAME" rm -rf "$THEMES_DIR/dracula-gtk" "$THEMES_DIR/dracula-gtk-m
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
 sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null
 
-# Find the unzipped folder and rename it correctly
-UNZIPPED_GTK_DIR=$(sudo -u "$USER_NAME" find "$THEMES_DIR" -maxdepth 1 -mindepth 1 -type d -name "*dracula-gtk*" | head -n 1)
-if [ -n "$UNZIPPED_GTK_DIR" ] && [ "$(basename "$UNZIPPED_GTK_DIR")" != "dracula-gtk" ]; then
-    print_success "Renaming '$(basename "$UNZIPPED_GTK_DIR")' to 'dracula-gtk'..."
-    if ! sudo -u "$USER_NAME" mv "$UNZIPPED_GTK_DIR" "$THEMES_DIR/dracula-gtk"; then
-        print_warning "Failed to rename GTK theme folder. Theme may not appear correctly."
-    else
-        print_success "✅ GTK theme folder renamed to dracula-gtk."
-    fi
+# Find the unzipped folder and use that name
+GTK_THEME_NAME=$(sudo -u "$USER_NAME" find "$THEMES_DIR" -maxdepth 1 -mindepth 1 -type d -name "*dracula-gtk*" -printf '%f\n' | head -n 1)
+if [ -z "$GTK_THEME_NAME" ]; then
+    print_error "Could not find an extracted Dracula GTK theme folder. Please check your zip file."
 fi
-print_success "✅ Dracula GTK theme installed."
+print_success "✅ Found GTK theme folder named: $GTK_THEME_NAME"
 
 # Corrected Icons installation logic
 print_success "Installing Dracula Icons..."
@@ -289,22 +284,17 @@ sudo -u "$USER_NAME" rm -rf "$ICONS_DIR/Dracula" "$ICONS_DIR/Dracula-*"
 sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
 sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null
 
-# Find the unzipped folder and rename it correctly
-ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
-if [ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ]; then
-    print_success "Renaming '$(basename "$ACTUAL_ICON_DIR")' to '$ICONS_DIR/Dracula'..."
-    if ! sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"; then
-        print_warning "Failed to rename icon folder. Icons may not appear correctly."
-    else
-        print_success "✅ Icon folder renamed to Dracula."
-    fi
+# Find the unzipped folder and use that name
+ICON_THEME_NAME=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" -printf '%f\n' | head -n 1)
+if [ -z "$ICON_THEME_NAME" ]; then
+    print_error "Could not find an extracted Dracula icon theme folder. Please check your zip file."
 fi
-print_success "✅ Dracula Icons installed."
+print_success "✅ Found Icon theme folder named: $ICON_THEME_NAME"
 
 # --- The key addition: Update the icon cache to ensure icons are found by applications like Thunar. ---
 if command -v gtk-update-icon-cache &>/dev/null; then
     print_success "Updating the GTK icon cache for a smooth user experience..."
-    sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/Dracula"
+    sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/$ICON_THEME_NAME"
     print_success "✅ GTK icon cache updated successfully."
 else
     print_warning "gtk-update-icon-cache not found. Icons may not appear correctly until a reboot."
@@ -314,13 +304,13 @@ fi
 print_header "Setting GTK themes in settings.ini"
 # The 'EOF_GTK' here-document is now quoted to prevent variable expansion by the root shell.
 # This ensures that `$HOME` is correctly evaluated by the target user's shell.
-sudo -u "$USER_NAME" bash <<'EOF_GTK'
+sudo -u "$USER_NAME" bash <<EOF_GTK
     # Write settings.ini for gtk-3.0
     mkdir -p "$HOME/.config/gtk-3.0"
     cat > "$HOME/.config/gtk-3.0/settings.ini" <<EOT_GTK3
 [Settings]
-gtk-theme-name=dracula-gtk
-gtk-icon-theme-name=Dracula
+gtk-theme-name=$GTK_THEME_NAME
+gtk-icon-theme-name=$ICON_THEME_NAME
 gtk-font-name=JetBrainsMono 10
 EOT_GTK3
 
@@ -328,8 +318,8 @@ EOT_GTK3
     mkdir -p "$HOME/.config/gtk-4.0"
     cat > "$HOME/.config/gtk-4.0/settings.ini" <<EOT_GTK4
 [Settings]
-gtk-theme-name=dracula-gtk
-gtk-icon-theme-name=Dracula
+gtk-theme-name=$GTK_THEME_NAME
+gtk-icon-theme-name=$ICON_THEME_NAME
 gtk-font-name=JetBrainsMono 10
 EOT_GTK4
 EOF_GTK
@@ -342,12 +332,23 @@ if command -v gsettings &>/dev/null; then
     user_uid=$(id -u "$USER_NAME")
     # Run gsettings with the user's correct D-Bus session environment
     # The `set` command is repeated to ensure both are applied.
-    sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
-    sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
+    sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME"
+    sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME"
     print_success "✅ Themes applied with gsettings."
 else
     print_warning "gsettings not found. Themes may not apply correctly to all applications."
 fi
+
+# --- FIX: New section to use xfconf-query to apply themes for XFCE apps like Thunar ---
+print_header "Applying GTK theme with xfconf-query for XFCE apps"
+if command -v xfconf-query &>/dev/null; then
+    sudo -u "$USER_NAME" xfconf-query -c xsettings -p /Net/ThemeName -s "$GTK_THEME_NAME" --create -t string
+    sudo -u "$USER_NAME" xfconf-query -c xsettings -p /Net/IconThemeName -s "$ICON_THEME_NAME" --create -t string
+    print_success "✅ Themes applied with xfconf-query."
+else
+    print_warning "xfconf-query not found. Themes may not apply correctly to all XFCE applications."
+fi
+
 
 HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
 sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<'EOF_HYPR_VARS'
