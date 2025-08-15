@@ -93,7 +93,7 @@ PACKAGES=(
     sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava starship
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller fastfetch
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
-    waybar
+    waybar hyprlock
 )
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
@@ -162,7 +162,7 @@ else
     print_header "yay is already installed."
 fi
 
-declare -a AUR_PACKAGES=(tofi swww hyprpicker hyprlock grimblast hypridle)
+declare -a AUR_PACKAGES=(tofi swww hyprpicker grimblast hypridle)
 if [[ "${#AUR_PACKAGES[@]}" -gt 0 ]]; then
     print_header "Installing AUR packages..."
     # The yay command is also now run in a non-fatal way
