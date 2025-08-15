@@ -25,7 +25,8 @@ print_bold_blue() {
     echo -e "\e[1m\e[34m$1\e[0m"
 }
 
-run_command() {
+# This function is used for critical commands that should halt the script on failure.
+run_critical_command() {
     local command="$1"
     local description="$2"
     local confirm_needed="${3:-"yes"}"
@@ -39,6 +40,19 @@ run_command() {
         print_error "Failed to '$description'."
     fi
     print_success "✅ Success: '$description'"
+}
+
+# This new function is for non-critical commands that should be tried, but not fatal.
+run_nonfatal_command() {
+    local command="$1"
+    local description="$2"
+    echo -e "\nAttempting: $description"
+    if ! eval "$command"; then
+        print_warning "Failed to '$description'. Skipping this step."
+        return 1
+    fi
+    print_success "✅ Success: '$description'"
+    return 0
 }
 
 # --- Main Execution Logic ---
@@ -105,20 +119,20 @@ GPU_INFO=$(lspci | grep -Ei "VGA|3D")
 
 if echo "$GPU_INFO" | grep -qi "nvidia"; then
     print_bold_blue "NVIDIA GPU detected."
-    run_command "pacman -S --noconfirm nvidia nvidia-utils nvidia-settings" "Install NVIDIA drivers"
+    run_critical_command "pacman -S --noconfirm nvidia nvidia-utils nvidia-settings" "Install NVIDIA drivers"
 elif echo "$GPU_INFO" | grep -qi "amd"; then
     print_bold_blue "AMD GPU detected."
-    run_command "pacman -S --noconfirm xf86-video-amdgpu vulkan-radeon libva-mesa-driver mesa-vdpau" "Install AMD drivers"
+    run_critical_command "pacman -S --noconfirm xf86-video-amdgpu vulkan-radeon libva-mesa-driver mesa-vdpau" "Install AMD drivers"
 elif echo "$GPU_INFO" | grep -qi "intel"; then
     print_bold_blue "Intel GPU detected."
-    run_command "pacman -S --noconfirm mesa libva-intel-driver intel-media-driver vulkan-intel" "Install Intel drivers"
+    run_critical_command "pacman -S --noconfirm mesa libva-intel-driver intel-media-driver vulkan-intel" "Install Intel drivers"
 else
     print_warning "No supported GPU detected. Info: $GPU_INFO"
     if [ "$CONFIRMATION" == "yes" ]; then
         read -p "Try installing NVIDIA drivers anyway? [Y/n]: " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            run_command "pacman -S --noconfirm nvidia nvidia-utils nvidia-settings" "Install NVIDIA drivers (forced)"
+            run_critical_command "pacman -S --noconfirm nvidia nvidia-utils nvidia-settings" "Install NVIDIA drivers (forced)"
         fi
     fi
 fi
@@ -137,6 +151,7 @@ print_success "\n✅ System-level setup is complete! Now starting user-level set
 # --- User-level tasks (executed as the user via sudo) ---
 print_header "Starting User-Level Setup"
 
+# Modified to use the new non-fatal run function
 if ! sudo -u "$USER_NAME" command -v yay &>/dev/null; then
     print_header "Installing yay from AUR"
     if sudo -u "$USER_NAME" bash -c '
@@ -144,7 +159,9 @@ if ! sudo -u "$USER_NAME" command -v yay &>/dev/null; then
         YAY_TEMP_DIR="$(mktemp -d -p "$HOME")"
         cd "$YAY_TEMP_DIR" || exit 1
         
-        git clone https://aur.archlinux.org/yay.git
+        # Git clone command is now wrapped to allow failure without exiting the whole script
+        git clone https://aur.archlinux.org/yay.git || { echo "Failed to clone yay.git"; exit 1; }
+        
         cd yay || exit 1
         makepkg -si --noconfirm
         
@@ -152,7 +169,7 @@ if ! sudo -u "$USER_NAME" command -v yay &>/dev/null; then
     '; then
         print_success "✅ Success: yay installed from AUR"
     else
-        print_error "❌ Failed: yay installation failed"
+        print_warning "❌ Failed: yay installation failed (non-fatal). The script will continue."
     fi
 else
     print_header "yay is already installed."
@@ -161,8 +178,9 @@ fi
 declare -a AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus)
 if [[ "${#AUR_PACKAGES[@]}" -gt 0 ]]; then
     print_header "Installing AUR packages..."
+    # The yay command is also now run in a non-fatal way
     if ! sudo -u "$USER_NAME" yay -S --noconfirm "${AUR_PACKAGES[@]}"; then
-        print_warning "Installation of some AUR packages failed (non-fatal)."
+        print_warning "Installation of some AUR packages failed (non-fatal). The script will continue."
     else
         print_success "✅ All AUR packages installed."
     fi
