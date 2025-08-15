@@ -239,14 +239,36 @@ sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
 GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10"
 sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
 
-if command -v gsettings &>/dev/null; then
-    print_success "Using gsettings to apply GTK themes."
-    sudo -u "$USER_NAME" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
-    sudo -u "$USER_NAME" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
-    print_success "✅ Themes applied with gsettings."
-else
-    print_warning "gsettings not found. Themes may not apply correctly to all applications."
-fi
+# --- New, robust block to handle gsettings and Thunar restart ---
+print_header "Applying GTK themes with gsettings and restarting Thunar"
+sudo -u "$USER_NAME" bash <<EOF_GSETTINGS
+    set -euo pipefail
+    
+    # Get the user's UID and DBUS path in the correct context
+    USER_UID=\$(id -u)
+    DBUS_PATH="unix:path=/run/user/\${USER_UID}/bus"
+    
+    # GSettings commands
+    if command -v gsettings &>/dev/null; then
+        echo 'Using gsettings to apply GTK themes.'
+        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
+        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
+        echo '✅ Themes applied with gsettings.'
+    else
+        echo 'gsettings not found. Themes may not apply correctly to all applications.'
+    fi
+    
+    # Thunar restart commands
+    if command -v thunar &>/dev/null; then
+        echo 'Restarting Thunar to apply changes'
+        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" pkill thunar || true
+        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" thunar &
+        echo '✅ Thunar restarted successfully.'
+    else
+        echo 'Thunar not found, skipping restart.'
+    fi
+EOF_GSETTINGS
+# --- End of new block ---
 
 HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
 sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<'EOF_HYPR_VARS'
