@@ -275,7 +275,9 @@ if [ -z "$GTK_THEME_NAME" ]; then
     print_error "Could not find an extracted GTK theme folder inside the zip. Please check the zip file's contents."
 fi
 print_success "✅ Found extracted GTK theme folder named: $GTK_THEME_NAME"
-sudo -u "$USER_NAME" mv "$TEMP_THEME_DIR/$GTK_THEME_NAME" "$THEMES_DIR/"
+if ! sudo -u "$USER_NAME" mv "$TEMP_THEME_DIR/$GTK_THEME_NAME" "$THEMES_DIR/"; then
+    print_error "Failed to move the extracted GTK theme folder into the user's .themes directory."
+fi
 sudo -u "$USER_NAME" rm -rf "$TEMP_THEME_DIR"
 print_success "✅ Successfully installed the GTK theme."
 
@@ -291,7 +293,9 @@ if [ -z "$ICON_THEME_NAME" ]; then
     print_error "Could not find an extracted icon theme folder inside the zip. Please check the zip file's contents."
 fi
 print_success "✅ Found extracted Icon theme folder named: $ICON_THEME_NAME"
-sudo -u "$USER_NAME" mv "$TEMP_ICON_DIR/$ICON_THEME_NAME" "$ICONS_DIR/"
+if ! sudo -u "$USER_NAME" mv "$TEMP_ICON_DIR/$ICON_THEME_NAME" "$ICONS_DIR/"; then
+    print_error "Failed to move the extracted Icon theme folder into the user's .icons directory."
+fi
 sudo -u "$USER_NAME" rm -rf "$TEMP_ICON_DIR"
 print_success "✅ Successfully installed the Icon theme."
 
