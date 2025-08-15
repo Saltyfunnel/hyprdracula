@@ -1,81 +1,46 @@
-/*
- * Wofi Configuration File - Dracula Theme
- * This file provides a full CSS-based configuration for the Wofi application launcher,
- * styled with the Dracula color palette.
- */
-
-/* Dracula Color Palette - Defined as CSS variables for easy customization */
-:root {
-    --dracula-background: #282a36;
-    --dracula-foreground: #f8f8f2;
-    --dracula-selection: #44475a;
-    --dracula-purple: #bd93f9;
-    --dracula-pink: #ff79c6;
-    --dracula-cyan: #8be9fd;
-    --dracula-green: #50fa7b;
-    --dracula-orange: #ffb86c;
-    --dracula-red: #ff5555;
-    --dracula-yellow: #f1fa8c;
-    --dracula-comment: #6272a4;
+window {
+    background: rgba(40, 42, 54, 0.95);
+    border-radius: 20px;
+    padding: 20px;
+    font-family: "Montserrat", sans-serif;
+    font-size: 22px;
+    color: #f8f8f2;
 }
 
-/* Main window styling */
-#window {
-    background-color: var(--dracula-background);
-    border: 2px solid var(--dracula-purple);
-    border-radius: 12px;
-    padding: 15px;
-    font-family: 'JetBrainsMono Nerd Font', 'Fira Code', sans-serif;
+label#title {
+    color: #ff79c6;
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    text-align: center;
 }
 
-/* Input field styling */
-#input {
-    background-color: var(--dracula-selection);
-    color: var(--dracula-foreground);
+entry {
+    background: rgba(68, 71, 90, 0.85);
+    color: #f8f8f2;
+    font-size: 22px;
+    padding: 14px;
+    border-radius: 10px;
     border: none;
-    border-radius: 8px;
+}
+
+entry:focus {
+    outline: 2px solid #ff79c6;
+    background: rgba(68, 71, 90, 0.95);
+}
+
+box#results box {
+    background: rgba(68, 71, 90, 0.8);
+    color: #f8f8f2;
     padding: 10px;
-    margin-bottom: 10px;
-    font-size: 16px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    font-weight: 500;
 }
 
-/* List of entries (applications) */
-#scroll {
-    border: none;
-    padding: 5px;
-    border-radius: 8px;
-}
-
-/* Individual entry (application) styling */
-#entry {
-    background-color: transparent;
-    color: var(--dracula-foreground);
-    padding: 8px;
-    margin: 4px 0;
-    border-radius: 6px;
-    font-size: 14px;
-    transition: background-color 0.2s ease;
-}
-
-/* Styling for a focused/selected entry */
-#entry:focus {
-    background-color: var(--dracula-selection);
-    color: var(--dracula-purple);
-}
-
-/* Styling for a focused/selected text inside the entry */
-#entry:focus text {
-    color: var(--dracula-purple);
-}
-
-/* Styling for the entry text itself */
-#entry text {
-    color: var(--dracula-foreground);
-}
-
-/* Placeholder text styling (for when no input is entered) */
-#input:empty:before {
-    content: "Search for applications...";
-    color: var(--dracula-comment);
+box#results box:hover,
+box#results box:selected {
+    background-color: #bd93f9;
+    color: #282a36;
+    font-weight: bold;
 }
