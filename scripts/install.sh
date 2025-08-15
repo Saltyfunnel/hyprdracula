@@ -333,17 +333,33 @@ EOT_GTK4
 EOF_GTK
 print_success "✅ GTK settings files created."
 
-# --- FIX: GSettings block now runs as the user to prevent unbound variable issues ---
-print_header "Applying GTK themes with gsettings"
-sudo -u "$USER_NAME" bash <<'EOF_GSETTINGS'
+# --- FIX: GSettings and Thunar restart block now uses variables correctly ---
+print_header "Applying GTK themes with gsettings and restarting Thunar"
+sudo -u "$USER_NAME" bash <<EOF_GSETTINGS
+    set -euo pipefail
+    
+    # Get the user's UID and DBUS path in the correct context
+    USER_UID=\$(id -u)
+    DBUS_PATH="unix:path=/run/user/\${USER_UID}/bus"
+    
+    # GSettings commands
     if command -v gsettings &>/dev/null; then
-        echo "Using gsettings to apply GTK themes."
-        local user_uid=$(id -u)
-        env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface gtk-theme "Dracula"
-        env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
-        echo "✅ Themes applied with gsettings."
+        echo 'Using gsettings to apply GTK themes.'
+        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME"
+        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME"
+        echo '✅ Themes applied with gsettings.'
     else
-        echo "gsettings not found. Themes may not apply correctly to all applications."
+        echo 'gsettings not found. Themes may not apply correctly to all applications.'
+    fi
+    
+    # Thunar restart commands
+    if command -v thunar &>/dev/null; then
+        echo 'Restarting Thunar to apply changes'
+        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" pkill thunar || true
+        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" thunar &
+        echo '✅ Thunar restarted successfully.'
+    else
+        echo 'Thunar not found, skipping restart.'
     fi
 EOF_GSETTINGS
 
@@ -412,19 +428,5 @@ if [ ! -f "$UCA_FILE" ]; then
 EOF_UCA
 fi
 print_success "✅ Thunar action configured."
-
-# --- FIX: Ensure Thunar can be restarted by providing the correct D-Bus environment ---
-print_header "Restarting Thunar to apply changes"
-sudo -u "$USER_NAME" bash <<'EOF_THUNAR'
-    if command -v thunar &>/dev/null; then
-        echo "Restarting Thunar to apply changes"
-        local user_uid=$(id -u)
-        env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" pkill thunar || true
-        env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" thunar &
-        echo "✅ Thunar restarted successfully."
-    else
-        echo "Thunar not found, skipping restart."
-    fi
-EOF_THUNAR
 
 print_success "\n🎉 The installation is complete! Please reboot your system to apply all changes."
