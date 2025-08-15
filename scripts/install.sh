@@ -93,7 +93,7 @@ PACKAGES=(
     sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
-    waybar wofi hyprpaper
+    waybar wofi hyprland hyprpaper
 )
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
