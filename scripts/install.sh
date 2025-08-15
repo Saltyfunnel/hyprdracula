@@ -88,12 +88,25 @@ if [ "$CONFIRMATION" == "yes" ]; then
     read -p "Update system and install packages? Press Enter to continue..."
 fi
 PACKAGES=(
-    git base-devel pipewire wireplumber pamixer brightnessctl
+    # Core system tools and dependencies
+    git base-devel
+    pipewire wireplumber pamixer brightnessctl
+    starship
+
+    # Fonts
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
+
+    # Display Manager & Core Applications
     sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
+    
+    # File Manager & Plugins
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
+
+    # Desktop Services & Protocols
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
-    waybar wofi hyprland hyprpaper
+    
+    # Hyprland specific components
+    waybar wofi hyprland hyprpaper hyprlock hypridle
 )
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
