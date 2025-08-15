@@ -90,10 +90,10 @@ fi
 PACKAGES=(
     git base-devel pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
-    sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava starship
-    thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller fastfetch
+    sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
+    thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
-    waybar hyprlock hyprpicker hypridle
+    waybar wofi hyprpaper
 )
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
@@ -138,43 +138,6 @@ print_success "\n✅ System-level setup is complete! Now starting user-level set
 # --- User-level tasks (executed as the user via sudo) ---
 print_header "Starting User-Level Setup"
 
-# Modified to use the new non-fatal run function
-if ! sudo -u "$USER_NAME" command -v yay &>/dev/null; then
-    print_header "Installing yay from AUR"
-    if sudo -u "$USER_NAME" bash -c '
-        set -e
-        YAY_TEMP_DIR="$(mktemp -d -p "$HOME")"
-        cd "$YAY_TEMP_DIR" || exit 1
-        
-        # Git clone command is now wrapped to allow failure without exiting the whole script
-        git clone https://aur.archlinux.org/yay.git || { echo "Failed to clone yay.git"; exit 1; }
-        
-        cd yay || exit 1
-        makepkg -si --noconfirm
-        
-        rm -rf "$YAY_TEMP_DIR"
-    '; then
-        print_success "✅ Success: yay installed from AUR"
-    else
-        print_warning "❌ Failed: yay installation failed (non-fatal). The script will continue."
-    fi
-else
-    print_header "yay is already installed."
-fi
-
-declare -a AUR_PACKAGES=(tofi swww grimblast )
-if [[ "${#AUR_PACKAGES[@]}" -gt 0 ]]; then
-    print_header "Installing AUR packages..."
-    # The yay command is also now run in a non-fatal way
-    if ! sudo -u "$USER_NAME" yay -S --noconfirm "${AUR_PACKAGES[@]}"; then
-        print_warning "Installation of some AUR packages failed (non-fatal). The script will continue."
-    else
-        print_success "✅ All AUR packages installed."
-    fi
-else
-    print_warning "No AUR packages to install. Skipping package installation."
-fi
-
 copy_configs() {
     local source_dir="$1"
     local dest_dir="$2"
@@ -195,7 +158,6 @@ copy_configs() {
 
 print_header "Copying configuration files"
 copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
-copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
@@ -387,6 +349,16 @@ HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
 if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; then
     sudo -u "$USER_NAME" echo -e "\n# Sourced by the setup script to set GTK and icon themes\nsource = $HYPR_VARS_FILE" >> "$HYPR_CONF"
 fi
+
+# Apply the new wallpaper and launcher configs
+print_header "Updating Hyprland and Waybar configs for Pacman packages"
+sudo -u "$USER_NAME" sed -i 's/^exec-once = swww-daemon$/exec-once = hyprpaper/' "$CONFIG_DIR/hypr/hyprland.conf"
+sudo -u "$USER_NAME" sed -i 's/^bind = \$mainMod, R, exec, tofi-drun$/bind = \$mainMod, R, exec, wofi --show drun/' "$CONFIG_DIR/hypr/hyprland.conf"
+sudo -u "$USER_NAME" sed -i 's/"swww"/"hyprpaper"/' "$CONFIG_DIR/waybar/config"
+sudo -u "$USER_NAME" sed -i 's/swww.js//' "$CONFIG_DIR/waybar/config"
+sudo -u "$USER_NAME" sed -i 's/\.swww {/\.hyprpaper {/' "$CONFIG_DIR/waybar/style.css"
+sudo -u "$USER_NAME" sed -i 's/swww-next.sh/hyprpaper-next.sh/' "$CONFIG_DIR/waybar/config"
+print_success "✅ Hyprland and Waybar configs updated to use wofi and hyprpaper."
 
 print_success "✅ GTK themes and icons configured for Hyprland."
 
