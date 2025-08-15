@@ -309,12 +309,28 @@ else
     print_warning "gtk-update-icon-cache not found. Icons may not appear correctly until a reboot."
 fi
 
-GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
-GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
-sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
+# New, robust way to write settings.ini using here-documents
+print_header "Setting GTK themes in settings.ini"
+sudo -u "$USER_NAME" bash <<EOF_GTK
+    # Write settings.ini for gtk-3.0
+    mkdir -p "$HOME/.config/gtk-3.0"
+    cat > "$HOME/.config/gtk-3.0/settings.ini" <<EOT_GTK3
+[Settings]
+gtk-theme-name=dracula-gtk
+gtk-icon-theme-name=Dracula
+gtk-font-name=JetBrainsMono 10
+EOT_GTK3
 
-GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10"
-sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
+    # Write settings.ini for gtk-4.0
+    mkdir -p "$HOME/.config/gtk-4.0"
+    cat > "$HOME/.config/gtk-4.0/settings.ini" <<EOT_GTK4
+[Settings]
+gtk-theme-name=dracula-gtk
+gtk-icon-theme-name=Dracula
+gtk-font-name=JetBrainsMono 10
+EOT_GTK4
+EOF_GTK
+print_success "✅ GTK settings files created."
 
 # --- FIX: New, robust gsettings commands using the user's D-Bus session ---
 if command -v gsettings &>/dev/null; then
