@@ -165,6 +165,9 @@ copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/wofi" "$CONFIG_DIR/wofi" "Wofi"
+# The new line to copy the Starship configuration file.
+copy_configs "$SCRIPT_DIR/configs/starship" "$CONFIG_DIR/starship" "Starship"
+
 
 # --- Setting up GTK themes and icons from local zip files ---
 print_header "Setting up GTK themes and icons from local zip files"
