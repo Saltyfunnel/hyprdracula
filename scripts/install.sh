@@ -372,34 +372,28 @@ print_success "✅ Hyprland and Waybar configs updated to use wofi and hyprpaper
 
 print_success "✅ GTK themes and icons configured for Hyprland."
 
-# --- NEW: Enhanced Logging for the wallpaper copy operation ---
-print_header "Creating backgrounds directory"
+# --- NEW: Final and robust wallpaper install block ---
+print_header "Creating and Verifying Wallpapers Directory"
 WALLPAPER_SRC="$SCRIPT_DIR/assets/backgrounds"
 WALLPAPER_DEST="$CONFIG_DIR/assets/backgrounds"
 
-print_bold_blue "Checking for source wallpapers..."
-if [ ! -d "$WALLPAPER_SRC" ]; then
-    print_warning "Source backgrounds directory not found at '$WALLPAPER_SRC'."
-    print_warning "Creating a placeholder directory at $WALLPAPER_SRC."
-    sudo -u "$USER_NAME" mkdir -p "$WALLPAPER_SRC"
-    print_warning "Please place your wallpapers in this directory and re-run the script."
+print_bold_blue "Attempting to create destination directory: $WALLPAPER_DEST"
+# Use 'install -d' for more reliable directory creation with correct user permissions
+sudo -u "$USER_NAME" install -d "$WALLPAPER_DEST"
+
+# Verify the directory was created
+if [ -d "$WALLPAPER_DEST" ]; then
+    print_success "✅ Destination directory successfully created at '$WALLPAPER_DEST'."
 else
-    print_success "✅ Source backgrounds directory exists at '$WALLPAPER_SRC'."
+    print_error "Failed to create destination directory '$WALLPAPER_DEST'."
 fi
 
-print_bold_blue "Attempting to create destination directory..."
-sudo -u "$USER_NAME" mkdir -p "$WALLPAPER_DEST"
-print_success "✅ Destination directory exists at '$WALLPAPER_DEST'."
-
-print_bold_blue "Attempting to copy backgrounds..."
-echo "Running the copy command with variables..."
-set -x # Turn on command tracing
+print_bold_blue "Attempting to copy backgrounds from '$WALLPAPER_SRC' to '$WALLPAPER_DEST'."
 if ! sudo -u "$USER_NAME" cp -r "$WALLPAPER_SRC/." "$WALLPAPER_DEST"; then
     print_error "Failed to copy backgrounds."
 fi
-set +x # Turn off command tracing
-print_success "✅ Wallpapers copied to $WALLPAPER_DEST."
-# --- END NEW: Enhanced Logging ---
+print_success "✅ Wallpapers copied successfully."
+# --- END NEW BLOCK ---
 
 print_header "Setting up Thunar custom action"
 UCA_DIR="$CONFIG_DIR/Thunar"
