@@ -1,6 +1,7 @@
 #!/bin/bash
 # A one-stop script for installing a Dracula-themed Hyprland setup on Arch Linux.
-# This script handles both system-level and user-level tasks in a single run.
+# This script handles both system-level and user-level tasks in a single run,
+# using only official Arch Linux repositories via pacman.
 set -euo pipefail
 
 # --- Global Helper Functions ---
@@ -92,7 +93,7 @@ PACKAGES=(
     sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
-    waybar
+    waybar hyprland hyprpaper hypridle hyprlock starship fastfetch
 )
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
@@ -137,38 +138,7 @@ print_success "\n✅ System-level setup is complete! Now starting user-level set
 # --- User-level tasks (executed as the user via sudo) ---
 print_header "Starting User-Level Setup"
 
-if ! sudo -u "$USER_NAME" command -v yay &>/dev/null; then
-    print_header "Installing yay from AUR"
-    if sudo -u "$USER_NAME" bash -c '
-        set -e
-        YAY_TEMP_DIR="$(mktemp -d -p "$HOME")"
-        cd "$YAY_TEMP_DIR" || exit 1
-        
-        git clone https://aur.archlinux.org/yay.git
-        cd yay || exit 1
-        makepkg -si --noconfirm
-        
-        rm -rf "$YAY_TEMP_DIR"
-    '; then
-        print_success "✅ Success: yay installed from AUR"
-    else
-        print_error "❌ Failed: yay installation failed"
-    fi
-else
-    print_header "yay is already installed."
-fi
-
-declare -a AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus)
-if [[ "${#AUR_PACKAGES[@]}" -gt 0 ]]; then
-    print_header "Installing AUR packages..."
-    if ! sudo -u "$USER_NAME" yay -S --noconfirm "${AUR_PACKAGES[@]}"; then
-        print_warning "Installation of some AUR packages failed (non-fatal)."
-    else
-        print_success "✅ All AUR packages installed."
-    fi
-else
-    print_warning "No AUR packages to install. Skipping package installation."
-fi
+# No AUR packages to install in this version of the script.
 
 copy_configs() {
     local source_dir="$1"
@@ -190,43 +160,9 @@ copy_configs() {
 
 print_header "Copying configuration files"
 copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
-copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
-copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
-
-print_header "Setting up Fastfetch and Starship"
-sudo -u "$USER_NAME" bash -c "
-    add_fastfetch_to_shell() {
-        local shell_config=\"\$1\"
-        local shell_file=\"$USER_HOME/\$shell_config\"
-        local shell_content=\"\\n# Added by Dracula Hyprland setup script\\nif command -v fastfetch &>/dev/null; then\\n  fastfetch\\nfi\\n\"
-        if ! grep -q \"fastfetch\" \"\$shell_file\" 2>/dev/null; then
-            echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
-        fi
-    }
-    add_starship_to_shell() {
-        local shell_config=\"\$1\"
-        local shell_type=\"\$2\"
-        local shell_file=\"$USER_HOME/\$shell_config\"
-        local shell_content=\"\\n# Added by Dracula Hyprland setup script\\neval \\\"\\\$(starship init \$shell_type)\\\"\\n\"
-        if ! grep -q \"starship\" \"\$shell_file\" 2>/dev/null; then
-            echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
-        fi
-    }
-    add_fastfetch_to_shell \".bashrc\" \"bash\"
-    add_fastfetch_to_shell \".zshrc\" \"zsh\"
-    
-    STARSHIP_SRC=\"$SCRIPT_DIR/configs/starship/starship.toml\"
-    STARSHIP_DEST=\"$CONFIG_DIR/starship.toml\"
-    if [ -f \"\$STARSHIP_SRC\" ]; then
-        cp \"\$STARSHIP_SRC\" \"\$STARSHIP_DEST\" || print_warning \"Failed to copy starship config.\"
-    fi
-    add_starship_to_shell \".bashrc\" \"bash\"
-    add_starship_to_shell \".zshrc\" \"zsh\"
-"
-print_success "✅ Shell integrations complete."
 
 # --- Setting up GTK themes and icons from local zip files ---
 print_header "Setting up GTK themes and icons from local zip files"
@@ -242,45 +178,49 @@ if [ ! -f "$ASSETS_DIR/Dracula.zip" ]; then
 fi
 print_success "✅ Local asset files confirmed."
 
-# Corrected GTK theme installation logic
+# Improved GTK theme installation logic
 print_success "Installing Dracula GTK theme..."
 # Clean up any previous install to prevent overwrite errors
-sudo -u "$USER_NAME" rm -rf "$THEMES_DIR/dracula-gtk" "$THEMES_DIR/dracula-gtk-master"
-sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
-sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null
-
-# Find the unzipped folder and rename it correctly
-UNZIPPED_GTK_DIR=$(sudo -u "$USER_NAME" find "$THEMES_DIR" -maxdepth 1 -mindepth 1 -type d -name "*dracula-gtk*" | head -n 1)
-if [ -n "$UNZIPPED_GTK_DIR" ] && [ "$(basename "$UNZIPPED_GTK_DIR")" != "dracula-gtk" ]; then
-    print_success "Renaming '$(basename "$UNZIPPED_GTK_DIR")' to 'dracula-gtk'..."
-    if ! sudo -u "$USER_NAME" mv "$UNZIPPED_GTK_DIR" "$THEMES_DIR/dracula-gtk"; then
-        print_warning "Failed to rename GTK theme folder. Theme may not appear correctly."
-    else
-        print_success "✅ GTK theme folder renamed to dracula-gtk."
+sudo -u "$USER_NAME" rm -rf "$THEMES_DIR/dracula-gtk"
+# Unzip, but only proceed if the unzip command was successful
+if sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null; then
+    # Find the unzipped folder and rename it correctly
+    UNZIPPED_GTK_DIR=$(sudo -u "$USER_NAME" find "$THEMES_DIR" -maxdepth 1 -mindepth 1 -type d -name "*dracula-gtk*" | head -n 1)
+    if [ -n "$UNZIPPED_GTK_DIR" ] && [ "$(basename "$UNZIPPED_GTK_DIR")" != "dracula-gtk" ]; then
+        print_success "Renaming '$(basename "$UNZIPPED_GTK_DIR")' to 'dracula-gtk'..."
+        if ! sudo -u "$USER_NAME" mv "$UNZIPPED_GTK_DIR" "$THEMES_DIR/dracula-gtk"; then
+            print_warning "Failed to rename GTK theme folder. Theme may not appear correctly."
+        else
+            print_success "✅ GTK theme folder renamed to dracula-gtk."
+        fi
     fi
+else
+    print_warning "Failed to unzip GTK theme. Please check your zip file."
 fi
-print_success "✅ Dracula GTK theme installed."
+print_success "✅ Dracula GTK theme installation completed."
 
-# Corrected Icons installation logic
+# Improved Icons installation logic
 print_success "Installing Dracula Icons..."
 # Clean up any previous install to prevent overwrite errors
-sudo -u "$USER_NAME" rm -rf "$ICONS_DIR/Dracula" "$ICONS_DIR/Dracula-*"
-sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
-sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null
-
-# Find the unzipped folder and rename it correctly
-ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
-if [ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ]; then
-    print_success "Renaming '$(basename "$ACTUAL_ICON_DIR")' to '$ICONS_DIR/Dracula'..."
-    if ! sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"; then
-        print_warning "Failed to rename icon folder. Icons may not appear correctly."
-    else
-        print_success "✅ Icon folder renamed to Dracula."
+sudo -u "$USER_NAME" rm -rf "$ICONS_DIR/Dracula"
+# Unzip, but only proceed if the unzip command was successful
+if sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null; then
+    # Find the unzipped folder and rename it correctly
+    ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
+    if [ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ]; then
+        print_success "Renaming '$(basename "$ACTUAL_ICON_DIR")' to '$ICONS_DIR/Dracula'..."
+        if ! sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"; then
+            print_warning "Failed to rename icon folder. Icons may not appear correctly."
+        else
+            print_success "✅ Icon folder renamed to Dracula."
+        fi
     fi
+else
+    print_warning "Failed to unzip Icons. Please check your zip file."
 fi
-print_success "✅ Dracula Icons installed."
+print_success "✅ Dracula Icons installation completed."
 
-# --- The key addition: Update the icon cache to ensure icons are found by applications like Thunar. ---
+# The key addition: Update the icon cache to ensure icons are found by applications like Thunar.
 if command -v gtk-update-icon-cache &>/dev/null; then
     print_success "Updating the GTK icon cache for a smooth user experience..."
     sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/Dracula"
@@ -314,12 +254,32 @@ env = ICON_THEME,Dracula
 env = XDG_CURRENT_DESKTOP,Hyprland
 EOF_HYPR_VARS
 
+# We are going to make sure that the hyprland.conf file sources all of the necessary configs that we are providing,
+# and also launches the required apps that we installed with pacman.
+print_header "Updating hyprland.conf with necessary 'exec-once' commands"
 HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
+# Sourced by the setup script to set GTK and icon themes
 if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; then
     sudo -u "$USER_NAME" echo -e "\n# Sourced by the setup script to set GTK and icon themes\nsource = $HYPR_VARS_FILE" >> "$HYPR_CONF"
 fi
+# Launch hyprpaper for wallpaper management
+if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = hyprpaper" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Launch hyprpaper for wallpaper management\nexec-once = hyprpaper" >> "$HYPR_CONF"
+fi
+# Launch waybar
+if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = waybar" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Launch waybar, the status bar\nexec-once = waybar" >> "$HYPR_CONF"
+fi
+# Launch dunst for notifications
+if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = dunst" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Launch dunst, the notification daemon\nexec-once = dunst" >> "$HYPR_CONF"
+fi
+# Launch hypridle for power management and locking
+if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = hypridle" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Launch hypridle for power management and locking\nexec-once = hypridle" >> "$HYPR_CONF"
+fi
+print_success "✅ hyprland.conf updated with core components."
 
-print_success "✅ GTK themes and icons configured for Hyprland."
 
 print_header "Creating backgrounds directory"
 WALLPAPER_SRC="$SCRIPT_DIR/assets/backgrounds"
@@ -336,7 +296,6 @@ sudo -u "$USER_NAME" mkdir -p "$WALLPAPER_DEST"
 sudo -u "$USER_NAME" cp -r "$WALLPAPER_SRC/." "$WALLPAPER_DEST"
 print_success "✅ Wallpapers copied to $WALLPAPER_DEST."
 
-# --- Corrected wallpaper configuration for hyprpaper ---
 print_header "Configuring hyprpaper"
 HYPRPAPER_CONF="$CONFIG_DIR/hypr/hyprpaper.conf"
 if [ ! -f "$HYPRPAPER_CONF" ]; then
@@ -363,12 +322,6 @@ else
 fi
 print_success "✅ hyprpaper configured."
 
-# --- Ensure hyprpaper is launched correctly from hyprland.conf ---
-HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
-if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = hyprpaper" "$HYPR_CONF"; then
-    sudo -u "$USER_NAME" echo -e "\n# Launch hyprpaper for wallpaper management\nexec-once = hyprpaper" >> "$HYPR_CONF"
-fi
-print_success "✅ hyprpaper launch command added to hyprland.conf."
 
 print_header "Setting up Thunar custom action"
 UCA_DIR="$CONFIG_DIR/Thunar"
