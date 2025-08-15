@@ -228,7 +228,7 @@ if ! sudo -u "$USER_NAME" unzip "$ASSETS_DIR/dracula-gtk-master.zip" -d "$TEMP_T
 fi
 GTK_THEME_NAME=$(sudo -u "$USER_NAME" find "$TEMP_THEME_DIR" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | head -n 1)
 if [ -z "$GTK_THEME_NAME" ]; then
-    print_error "Could not find an extracted GTK theme folder inside the zip. Please check the zip file's contents."
+    print_error "The 'dracula-gtk-master.zip' file did not contain a valid theme directory. Please check its contents and re-run the script."
 fi
 print_success "✅ Found extracted GTK theme folder named: $GTK_THEME_NAME"
 # New: Ensure the destination directory exists before moving the files
@@ -250,7 +250,7 @@ if ! sudo -u "$USER_NAME" unzip "$ASSETS_DIR/Dracula.zip" -d "$TEMP_ICON_DIR"; t
 fi
 ICON_THEME_NAME=$(sudo -u "$USER_NAME" find "$TEMP_ICON_DIR" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | head -n 1)
 if [ -z "$ICON_THEME_NAME" ]; then
-    print_error "Could not find an extracted icon theme folder inside the zip. Please check the zip file's contents."
+    print_error "The 'Dracula.zip' file did not contain a valid icon directory. Please check its contents and re-run the script."
 fi
 print_success "✅ Found extracted Icon theme folder named: $ICON_THEME_NAME"
 # New: Ensure the destination directory exists before moving the files
