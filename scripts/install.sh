@@ -93,7 +93,7 @@ PACKAGES=(
     sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
-    waybar hyprland hyprpaper hypridle hyprlock starship fastfetch
+    waybar hyprland hyprpaper hypridle hyprlock starship fastfetch wofi
 )
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
@@ -163,6 +163,8 @@ copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
+copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
+copy_configs "$SCRIPT_DIR/configs/wofi" "$CONFIG_DIR/wofi" "Wofi"
 
 # --- Setting up GTK themes and icons from local zip files ---
 print_header "Setting up GTK themes and icons from local zip files"
@@ -270,6 +272,19 @@ sudo -u "$USER_NAME" bash <<EOF_GSETTINGS
 EOF_GSETTINGS
 # --- End of new block ---
 
+# Configure starship prompt
+print_header "Configuring Starship prompt"
+if [ -f "$USER_HOME/.bashrc" ]; then
+    if ! sudo -u "$USER_NAME" grep -q "eval \"\$(starship init bash)\"" "$USER_HOME/.bashrc"; then
+        sudo -u "$USER_NAME" echo -e "\n# Starship prompt\neval \"\$(starship init bash)\"" >> "$USER_HOME/.bashrc"
+        print_success "✅ Added starship to .bashrc."
+    else
+        print_success "✅ Starship already configured in .bashrc, skipping."
+    fi
+else
+    print_warning ".bashrc not found, skipping starship configuration. Please add 'eval \"\$(starship init bash)\"' to your shell's config file."
+fi
+
 HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
 sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<'EOF_HYPR_VARS'
 # Set GTK theme and icon theme
@@ -281,7 +296,7 @@ EOF_HYPR_VARS
 
 # We are going to make sure that the hyprland.conf file sources all of the necessary configs that we are providing,
 # and also launches the required apps that we installed with pacman.
-print_header "Updating hyprland.conf with necessary 'exec-once' commands"
+print_header "Updating hyprland.conf with necessary 'exec-once' commands and keybindings"
 HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
 # Sourced by the setup script to set GTK and icon themes
 if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; then
@@ -303,7 +318,15 @@ fi
 if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = hypridle" "$HYPR_CONF"; then
     sudo -u "$USER_NAME" echo -e "\n# Launch hypridle for power management and locking\nexec-once = hypridle" >> "$HYPR_CONF"
 fi
-print_success "✅ hyprland.conf updated with core components."
+# Launch Fastfetch
+if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = kitty -e fastfetch" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Launch Fastfetch in kitty terminal on startup\nexec-once = kitty -e fastfetch" >> "$HYPR_CONF"
+fi
+# Wofi Keybinding
+if [ -f "$HYPR_CONF" ] && ! grep -q "bind = \$mainMod, D, exec, wofi --show drun" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Wofi App Launcher keybinding\nbind = \$mainMod, D, exec, wofi --show drun" >> "$HYPR_CONF"
+fi
+print_success "✅ hyprland.conf updated with core components and keybindings."
 
 
 print_header "Creating backgrounds directory"
