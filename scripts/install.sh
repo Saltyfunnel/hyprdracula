@@ -275,6 +275,10 @@ if [ -z "$GTK_THEME_NAME" ]; then
     print_error "Could not find an extracted GTK theme folder inside the zip. Please check the zip file's contents."
 fi
 print_success "✅ Found extracted GTK theme folder named: $GTK_THEME_NAME"
+# New: Ensure the destination directory exists before moving the files
+if ! sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"; then
+    print_error "Failed to create destination directory for GTK theme."
+fi
 if ! sudo -u "$USER_NAME" mv "$TEMP_THEME_DIR/$GTK_THEME_NAME" "$THEMES_DIR/"; then
     print_error "Failed to move the extracted GTK theme folder into the user's .themes directory."
 fi
@@ -293,6 +297,10 @@ if [ -z "$ICON_THEME_NAME" ]; then
     print_error "Could not find an extracted icon theme folder inside the zip. Please check the zip file's contents."
 fi
 print_success "✅ Found extracted Icon theme folder named: $ICON_THEME_NAME"
+# New: Ensure the destination directory exists before moving the files
+if ! sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"; then
+    print_error "Failed to create destination directory for Icon theme."
+fi
 if ! sudo -u "$USER_NAME" mv "$TEMP_ICON_DIR/$ICON_THEME_NAME" "$ICONS_DIR/"; then
     print_error "Failed to move the extracted Icon theme folder into the user's .icons directory."
 fi
@@ -303,8 +311,8 @@ print_success "✅ Successfully installed the Icon theme."
 # --- The key addition: Update the icon cache to ensure icons are found by applications like Thunar. ---
 if command -v gtk-update-icon-cache &>/dev/null; then
     print_success "Updating the GTK icon cache for a smooth user experience..."
-    sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/$ICON_THEME_NAME"
-    print_success "✅ GTK icon cache updated successfully."
+    # The following command is now non-fatal to prevent the script from exiting if it fails.
+    run_nonfatal_command "sudo -u \"$USER_NAME\" gtk-update-icon-cache -f -t \"$ICONS_DIR/$ICON_THEME_NAME\"" "update GTK icon cache"
 else
     print_warning "gtk-update-icon-cache not found. Icons may not appear correctly until a reboot."
 fi
