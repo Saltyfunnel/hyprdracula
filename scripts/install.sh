@@ -24,7 +24,8 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Define variables
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The crucial change: navigate to the parent directory to find assets and configs.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 CONFIG_DIR="$USER_HOME/.config"
