@@ -215,35 +215,37 @@ copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 
 print_header "Setting up Fastfetch and Starship"
-sudo -u "$USER_NAME" bash -c "
+# Corrected with a 'here document' to avoid quoting issues
+sudo -u "$USER_NAME" bash <<'EOT'
     add_fastfetch_to_shell() {
-        local shell_config=\"\$1\"
-        local shell_file=\"$USER_HOME/\$shell_config\"
-        local shell_content=\"\\n# Added by Dracula Hyprland setup script\\nif command -v fastfetch &>/dev/null; then\\n  fastfetch\\nfi\\n\"
-        if ! grep -q \"fastfetch\" \"\$shell_file\" 2>/dev/null; then
-            echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
+        local shell_config="$1"
+        local shell_file="$HOME/$shell_config"
+        local shell_content="\n# Added by Dracula Hyprland setup script\nif command -v fastfetch &>/dev/null; then\n  fastfetch\nfi\n"
+        if ! grep -q "fastfetch" "$shell_file" 2>/dev/null; then
+            echo -e "$shell_content" | tee -a "$shell_file" >/dev/null
         fi
     }
     add_starship_to_shell() {
-        local shell_config=\"\$1\"
-        local shell_type=\"\$2\"
-        local shell_file=\"$USER_HOME/\$shell_config\"
-        local shell_content=\"\\n# Added by Dracula Hyprland setup script\\neval \\\"\\\$(starship init \$shell_type)\\\"\\n\"
-        if ! grep -q \"starship\" \"\$shell_file\" 2>/dev/null; then
-            echo -e \"\$shell_content\" | tee -a \"\$shell_file\" >/dev/null
+        local shell_config="$1"
+        local shell_type="$2"
+        local shell_file="$HOME/$shell_config"
+        local shell_content="\n# Added by Dracula Hyprland setup script\neval \"$(starship init $shell_type)\"\n"
+        if ! grep -q "starship" "$shell_file" 2>/dev/null; then
+            echo -e "$shell_content" | tee -a "$shell_file" >/dev/null
         fi
     }
-    add_fastfetch_to_shell \".bashrc\" \"bash\"
-    add_fastfetch_to_shell \".zshrc\" \"zsh\"
     
-    STARSHIP_SRC=\"$SCRIPT_DIR/configs/starship/starship.toml\"
-    STARSHIP_DEST=\"$CONFIG_DIR/starship.toml\"
-    if [ -f \"\$STARSHIP_SRC\" ]; then
-        cp \"\$STARSHIP_SRC\" \"\$STARSHIP_DEST\" || print_warning \"Failed to copy starship config.\"
+    add_fastfetch_to_shell ".bashrc" "bash"
+    add_fastfetch_to_shell ".zshrc" "zsh"
+    
+    STARSHIP_SRC="/home/$USER/dracula-hyprland-setup/configs/starship/starship.toml"
+    STARSHIP_DEST="/home/$USER/.config/starship.toml"
+    if [ -f "$STARSHIP_SRC" ]; then
+        cp "$STARSHIP_SRC" "$STARSHIP_DEST" || echo "Failed to copy starship config."
     fi
-    add_starship_to_shell \".bashrc\" \"bash\"
-    add_starship_to_shell \".zshrc\" \"zsh\"
-"
+    add_starship_to_shell ".bashrc" "bash"
+    add_starship_to_shell ".zshrc" "zsh"
+EOT
 print_success "✅ Shell integrations complete."
 
 # --- Setting up GTK themes and icons from local zip files ---
@@ -256,4 +258,134 @@ if [ ! -f "$ASSETS_DIR/dracula-gtk-master.zip" ]; then
     print_error "Dracula GTK theme archive not found at $ASSETS_DIR/dracula-gtk-master.zip. Please download it and place it there."
 fi
 if [ ! -f "$ASSETS_DIR/Dracula.zip" ]; then
-    print_error "Dracula Icons archive not found at $ASSETS_DIR/Dracula.zip. Please download it and pl
+    print_error "Dracula Icons archive not found at $ASSETS_DIR/Dracula.zip. Please download it and place it there."
+fi
+print_success "✅ Local asset files confirmed."
+
+# Corrected GTK theme installation logic
+print_success "Installing Dracula GTK theme..."
+# Clean up any previous install to prevent overwrite errors
+sudo -u "$USER_NAME" rm -rf "$THEMES_DIR/dracula-gtk" "$THEMES_DIR/dracula-gtk-master"
+sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
+sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null
+
+# Find the unzipped folder and rename it correctly
+UNZIPPED_GTK_DIR=$(sudo -u "$USER_NAME" find "$THEMES_DIR" -maxdepth 1 -mindepth 1 -type d -name "*dracula-gtk*" | head -n 1)
+if [ -n "$UNZIPPED_GTK_DIR" ] && [ "$(basename "$UNZIPPED_GTK_DIR")" != "dracula-gtk" ]; then
+    print_success "Renaming '$(basename "$UNZIPPED_GTK_DIR")' to 'dracula-gtk'..."
+    if ! sudo -u "$USER_NAME" mv "$UNZIPPED_GTK_DIR" "$THEMES_DIR/dracula-gtk"; then
+        print_warning "Failed to rename GTK theme folder. Theme may not appear correctly."
+    else
+        print_success "✅ GTK theme folder renamed to dracula-gtk."
+    fi
+fi
+print_success "✅ Dracula GTK theme installed."
+
+# Corrected Icons installation logic
+print_success "Installing Dracula Icons..."
+# Clean up any previous install to prevent overwrite errors
+sudo -u "$USER_NAME" rm -rf "$ICONS_DIR/Dracula" "$ICONS_DIR/Dracula-*"
+sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
+sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null
+
+# Find the unzipped folder and rename it correctly
+ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
+if [ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ]; then
+    print_success "Renaming '$(basename "$ACTUAL_ICON_DIR")' to '$ICONS_DIR/Dracula'..."
+    if ! sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"; then
+        print_warning "Failed to rename icon folder. Icons may not appear correctly."
+    else
+        print_success "✅ Icon folder renamed to Dracula."
+    fi
+fi
+print_success "✅ Dracula Icons installed."
+
+# --- The key addition: Update the icon cache to ensure icons are found by applications like Thunar. ---
+if command -v gtk-update-icon-cache &>/dev/null; then
+    print_success "Updating the GTK icon cache for a smooth user experience..."
+    sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/Dracula"
+    print_success "✅ GTK icon cache updated successfully."
+else
+    print_warning "gtk-update-icon-cache not found. Icons may not appear correctly until a reboot."
+fi
+
+GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
+GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
+sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
+
+GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10"
+sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
+
+# --- FIX: New, robust gsettings commands using the user's D-Bus session ---
+if command -v gsettings &>/dev/null; then
+    print_success "Using gsettings to apply GTK themes."
+    # Get the user's UID for the run directory path
+    user_uid=$(id -u "$USER_NAME")
+    # Run gsettings with the user's correct D-Bus session environment
+    sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
+    sudo -u "$USER_NAME" env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_uid}/bus" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
+    print_success "✅ Themes applied with gsettings."
+else
+    print_warning "gsettings not found. Themes may not apply correctly to all applications."
+fi
+
+HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
+sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<'EOF_HYPR_VARS'
+# Set GTK theme and icon theme
+env = GTK_THEME,dracula-gtk
+env = ICON_THEME,Dracula
+# Set XDG desktop to Hyprland
+env = XDG_CURRENT_DESKTOP,Hyprland
+EOF_HYPR_VARS
+
+HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
+if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Sourced by the setup script to set GTK and icon themes\nsource = $HYPR_VARS_FILE" >> "$HYPR_CONF"
+fi
+
+print_success "✅ GTK themes and icons configured for Hyprland."
+
+print_header "Creating backgrounds directory"
+WALLPAPER_SRC="$SCRIPT_DIR/assets/backgrounds"
+WALLPAPER_DEST="$CONFIG_DIR/assets/backgrounds"
+if [ ! -d "$WALLPAPER_SRC" ]; then
+    print_warning "Source backgrounds directory not found. Creating a placeholder directory at $WALLPAPER_SRC. Please place your wallpapers there."
+    sudo -u "$USER_NAME" mkdir -p "$WALLPAPER_SRC"
+else
+    print_success "✅ Source backgrounds directory exists."
+fi
+
+print_success "Copying backgrounds from '$WALLPAPER_SRC' to '$WALLPAPER_DEST'."
+sudo -u "$USER_NAME" mkdir -p "$WALLPAPER_DEST"
+sudo -u "$USER_NAME" cp -r "$WALLPAPER_SRC/." "$WALLPAPER_DEST"
+print_success "✅ Wallpapers copied to $WALLPAPER_DEST."
+
+print_header "Setting up Thunar custom action"
+UCA_DIR="$CONFIG_DIR/Thunar"
+UCA_FILE="$UCA_DIR/uca.xml"
+sudo -u "$USER_NAME" mkdir -p "$UCA_DIR"
+sudo -u "$USER_NAME" chmod 700 "$UCA_DIR"
+
+if [ ! -f "$UCA_FILE" ]; then
+    sudo -u "$USER_NAME" tee "$UCA_FILE" >/dev/null <<'EOF_UCA'
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+    <action>
+        <icon>utilities-terminal</icon>
+        <name>Open Kitty Here</name>
+        <command>kitty --directory=%d</command>
+        <description>Open kitty terminal in the current folder</description>
+        <patterns>*</patterns>
+        <directories_only>true</directories_only>
+        <startup_notify>true</startup_notify>
+    </action>
+</actions>
+EOF_UCA
+fi
+print_success "✅ Thunar action configured."
+
+sudo -u "$USER_NAME" pkill thunar || true
+sudo -u "$USER_NAME" thunar &
+print_success "✅ Thunar restarted."
+
+print_success "\n🎉 The installation is complete! Please reboot your system to apply all changes."
