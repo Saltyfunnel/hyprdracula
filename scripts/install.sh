@@ -90,8 +90,8 @@ fi
 PACKAGES=(
     git base-devel pipewire wireplumber pamixer brightnessctl
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
-    sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava steam
-    thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
+    sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava starship
+    thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller fastfetch
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
     waybar
 )
@@ -162,7 +162,7 @@ else
     print_header "yay is already installed."
 fi
 
-declare -a AUR_PACKAGES=(tofi fastfetch swww hyprpicker hyprlock grimblast hypridle starship spotify protonplus)
+declare -a AUR_PACKAGES=(tofi swww hyprpicker hyprlock grimblast hypridle)
 if [[ "${#AUR_PACKAGES[@]}" -gt 0 ]]; then
     print_header "Installing AUR packages..."
     # The yay command is also now run in a non-fatal way
