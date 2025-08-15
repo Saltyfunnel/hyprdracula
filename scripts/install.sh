@@ -215,9 +215,9 @@ copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 
 print_header "Setting up Fastfetch and Starship"
-# Corrected with a 'here document' to avoid quoting issues
-sudo -u "$USER_NAME" bash <<EOT
-    # Use HOME instead of USER_HOME for correct user path inside the subshell
+# The 'EOT' here-document is now quoted to prevent variable expansion by the root shell.
+# This ensures that `$HOME` is correctly evaluated by the target user's shell.
+sudo -u "$USER_NAME" bash <<'EOT'
     add_fastfetch_to_shell() {
         local shell_config="$1"
         local shell_file="$HOME/$shell_config"
@@ -312,7 +312,9 @@ fi
 
 # New, robust way to write settings.ini using here-documents
 print_header "Setting GTK themes in settings.ini"
-sudo -u "$USER_NAME" bash <<EOF_GTK
+# The 'EOF_GTK' here-document is now quoted to prevent variable expansion by the root shell.
+# This ensures that `$HOME` is correctly evaluated by the target user's shell.
+sudo -u "$USER_NAME" bash <<'EOF_GTK'
     # Write settings.ini for gtk-3.0
     mkdir -p "$HOME/.config/gtk-3.0"
     cat > "$HOME/.config/gtk-3.0/settings.ini" <<EOT_GTK3
