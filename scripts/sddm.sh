@@ -1,35 +1,33 @@
 #!/bin/bash
+# Install Dracula SDDM theme and set it as default on Arch/Hyprland
+
 set -e
 
-THEME_NAME="Yet-another-dracula"
-THEME_REPO="https://github.com/trancong12102/Yet-another-dracula.git"
-SDDM_DIR="/usr/share/sddm/themes"
+# Dependencies
+sudo pacman -S --needed git sddm --noconfirm
 
-# Install dependencies
-sudo pacman -S --noconfirm sddm qt5-declarative git
+# Clone the Dracula SDDM theme
+git clone https://github.com/adi1090x/Yet-another-Dracula.git /tmp/Yet-another-Dracula
 
-# Clone the theme
-git clone "$THEME_REPO" /tmp/"$THEME_NAME"
+# Move the theme to the SDDM themes directory
+sudo mkdir -p /usr/share/sddm/themes/Yet-another-Dracula
+sudo cp -r /tmp/Yet-another-Dracula/* /usr/share/sddm/themes/Yet-another-Dracula/
 
-# Detect correct theme folder
-if [ -d "/tmp/$THEME_NAME/SDDM" ]; then
-    THEME_SRC="/tmp/$THEME_NAME/SDDM"
-else
-    THEME_SRC="/tmp/$THEME_NAME"
-fi
+# Fix folder structure (move nested files up)
+sudo mv /usr/share/sddm/themes/Yet-another-Dracula/Yet-another-dracula/sddm/Dracula/* /usr/share/sddm/themes/Yet-another-Dracula/ 2>/dev/null || true
+sudo mv /usr/share/sddm/themes/Yet-another-Dracula/Yet-another-dracula/sddm/theme.conf /usr/share/sddm/themes/Yet-another-Dracula/ 2>/dev/null || true
+sudo rm -rf /usr/share/sddm/themes/Yet-another-Dracula/Yet-another-dracula
 
-# Copy theme
-sudo cp -r "$THEME_SRC" "$SDDM_DIR/$THEME_NAME"
+# Set the theme as current in sddm.conf
+sudo mkdir -p /etc/sddm.conf.d
+echo "[Theme]" | sudo tee /etc/sddm.conf.d/dracula.conf
+echo "Current=Yet-another-Dracula" | sudo tee -a /etc/sddm.conf.d/dracula.conf
 
-# Set permissions
-sudo chown -R root:root "$SDDM_DIR/$THEME_NAME"
+# Enable and restart SDDM
+sudo systemctl enable sddm
+sudo systemctl restart sddm
 
-# Create or update config
-if [ ! -f /etc/sddm.conf ]; then
-    echo -e "[Theme]\nCurrent=$THEME_NAME" | sudo tee /etc/sddm.conf
-else
-    sudo sed -i '/^\[Theme\]/,/^\[/ s/^Current=.*/Current='"$THEME_NAME"'/' /etc/sddm.conf || \
-    echo -e "[Theme]\nCurrent=$THEME_NAME" | sudo tee -a /etc/sddm.conf
-fi
+# Cleanup
+rm -rf /tmp/Yet-another-Dracula
 
-echo "==> Done. Please reboot or switch to a TTY and run 'sudo systemctl restart sddm' to see the theme."
+echo "✅ Dracula SDDM theme installed and set as default!"
