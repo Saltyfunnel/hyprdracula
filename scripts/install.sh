@@ -163,6 +163,7 @@ copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
+copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/dunst" "fastfetch"
 
 # --- Setting up GTK themes and icons from local zip files ---
 print_header "Setting up GTK themes and icons from local zip files"
@@ -257,33 +258,6 @@ env = ICON_THEME,Dracula
 env = XDG_CURRENT_DESKTOP,Hyprland
 EOF_HYPR_VARS
 
-# We are going to make sure that the hyprland.conf file sources all of the necessary configs that we are providing,
-# and also launches the required apps that we installed with pacman.
-print_header "Updating hyprland.conf with necessary 'exec-once' commands"
-HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
-# Sourced by the setup script to set GTK and icon themes
-if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; then
-    sudo -u "$USER_NAME" echo -e "\n# Sourced by the setup script to set GTK and icon themes\nsource = $HYPR_VARS_FILE" >> "$HYPR_CONF"
-fi
-# Launch hyprpaper for wallpaper management
-if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = hyprpaper" "$HYPR_CONF"; then
-    sudo -u "$USER_NAME" echo -e "\n# Launch hyprpaper for wallpaper management\nexec-once = hyprpaper" >> "$HYPR_CONF"
-fi
-# Launch waybar
-if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = waybar" "$HYPR_CONF"; then
-    sudo -u "$USER_NAME" echo -e "\n# Launch waybar, the status bar\nexec-once = waybar" >> "$HYPR_CONF"
-fi
-# Launch dunst for notifications
-if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = dunst" "$HYPR_CONF"; then
-    sudo -u "$USER_NAME" echo -e "\n# Launch dunst, the notification daemon\nexec-once = dunst" >> "$HYPR_CONF"
-fi
-# Launch hypridle for power management and locking
-if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = hypridle" "$HYPR_CONF"; then
-    sudo -u "$USER_NAME" echo -e "\n# Launch hypridle for power management and locking\nexec-once = hypridle" >> "$HYPR_CONF"
-fi
-print_success "✅ hyprland.conf updated with core components."
-
-
 print_header "Creating backgrounds directory"
 WALLPAPER_SRC="$SCRIPT_DIR/assets/backgrounds"
 WALLPAPER_DEST="$CONFIG_DIR/assets/backgrounds"
@@ -298,33 +272,6 @@ print_success "Copying backgrounds from '$WALLPAPER_SRC' to '$WALLPAPER_DEST'."
 sudo -u "$USER_NAME" mkdir -p "$WALLPAPER_DEST"
 sudo -u "$USER_NAME" cp -r "$WALLPAPER_SRC/." "$WALLPAPER_DEST"
 print_success "✅ Wallpapers copied to $WALLPAPER_DEST."
-
-print_header "Configuring hyprpaper"
-HYPRPAPER_CONF="$CONFIG_DIR/hypr/hyprpaper.conf"
-if [ ! -f "$HYPRPAPER_CONF" ]; then
-    print_warning "hyprpaper.conf not found, creating a new one."
-    # Create the file with the correct content
-    sudo -u "$USER_NAME" tee "$HYPRPAPER_CONF" >/dev/null <<'EOF_HYPRPAPER'
-# Preload your wallpaper
-# The path should be an absolute path to your wallpaper file
-preload = ~/.config/assets/backgrounds/default.png
-# set the wallpaper for a workspace
-wallpaper = ,~/.config/assets/backgrounds/default.png
-# Or to use a specific wallpaper for a specific monitor:
-# wallpaper = HDMI-A-1,~/.config/assets/backgrounds/default.png
-EOF_HYPRPAPER
-else
-    print_success "hyprpaper.conf exists, updating."
-    # Add preload and wallpaper lines if they don't exist
-    if ! sudo -u "$USER_NAME" grep -q "preload" "$HYPRPAPER_CONF"; then
-        sudo -u "$USER_NAME" echo "preload = ~/.config/assets/backgrounds/default.png" >> "$HYPRPAPER_CONF"
-    fi
-    if ! sudo -u "$USER_NAME" grep -q "wallpaper" "$HYPRPAPER_CONF"; then
-        sudo -u "$USER_NAME" echo "wallpaper = ,~/.config/assets/backgrounds/default.png" >> "$HYPR_CONF"
-    fi
-fi
-print_success "✅ hyprpaper configured."
-
 
 print_header "Setting up Thunar custom action"
 UCA_DIR="$CONFIG_DIR/Thunar"
