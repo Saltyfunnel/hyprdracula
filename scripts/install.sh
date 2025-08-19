@@ -78,7 +78,11 @@ fi
 if ! command -v curl &>/dev/null; then
     print_error "curl is not installed. Please install it with 'sudo pacman -S curl'."
 fi
-print_success "✅ Required tools (git, curl) confirmed."
+if ! command -v sed &>/dev/null; then
+    print_warning "sed is not installed. Attempting to install it now."
+    run_command "pacman -S --noconfirm sed" "Install sed"
+fi
+print_success "✅ Required tools (git, curl, sed) confirmed."
 
 # --- System-level tasks ---
 print_header "Starting System-Level Setup"
@@ -343,7 +347,7 @@ if [ -f "$USER_HOME/.bashrc" ]; then
 
     # Fastfetch
     if ! sudo -u "$USER_NAME" grep -q "fastfetch" "$USER_HOME/.bashrc"; then
-        sudo -u "$USER_NAME" echo -e "\n# Run fastfetch on terminal startup\nfastfetch" >> "$USER_HOME/.bashrc"
+        sudo -u "$USER_NAME" echo -e "\n# Run fastfetch on terminal startup\nfastfetch" >> "$USER_NAME/.bashrc"
         print_success "✅ Added fastfetch to .bashrc."
     else
         print_success "✅ Fastfetch already configured in .bashrc, skipping."
@@ -386,7 +390,6 @@ if [ ! -f "$UCA_FILE" ]; then
         <description>Open kitty terminal in the current folder</description>
         <patterns>*</patterns>
         <directories_only>true</directories_only>
-        <startup_notify>true</startup_notify>
     </action>
 </actions>
 EOF_UCA
