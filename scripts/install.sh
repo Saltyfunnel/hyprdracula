@@ -80,9 +80,13 @@ if ! command -v curl &>/dev/null; then
 fi
 if ! command -v sed &>/dev/null; then
     print_warning "sed is not installed. Attempting to install it now."
-    run_command "pacman -S --noconfirm sed" "Install sed"
+    run_command "pacman -S --noconfirm sed" "Install sed" "no"
 fi
-print_success "✅ Required tools (git, curl, sed) confirmed."
+if ! command -v grep &>/dev/null; then
+    print_warning "grep is not installed. Attempting to install it now."
+    run_command "pacman -S --noconfirm grep" "Install grep" "no"
+fi
+print_success "✅ Required tools (git, curl, sed, grep) confirmed."
 
 # --- System-level tasks ---
 print_header "Starting System-Level Setup"
@@ -347,7 +351,7 @@ if [ -f "$USER_HOME/.bashrc" ]; then
 
     # Fastfetch
     if ! sudo -u "$USER_NAME" grep -q "fastfetch" "$USER_HOME/.bashrc"; then
-        sudo -u "$USER_NAME" echo -e "\n# Run fastfetch on terminal startup\nfastfetch" >> "$USER_NAME/.bashrc"
+        sudo -u "$USER_NAME" echo -e "\n# Run fastfetch on terminal startup\nfastfetch" >> "$USER_HOME/.bashrc"
         print_success "✅ Added fastfetch to .bashrc."
     else
         print_success "✅ Fastfetch already configured in .bashrc, skipping."
