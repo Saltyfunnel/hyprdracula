@@ -133,6 +133,49 @@ systemctl enable --now polkit.service
 systemctl enable sddm.service
 print_success "✅ System services enabled."
 
+---
+
+### SDDM Theme Setup
+# This section automates the process of installing the Dracula SDDM theme.
+
+SDDM_THEMES_DIR="/usr/share/sddm/themes"
+THEME_NAME="dracula"
+
+print_header "Installing and Configuring Dracula SDDM Theme"
+
+# Check if the theme is already installed to prevent re-cloning
+if [ -d "$SDDM_THEMES_DIR/$THEME_NAME" ]; then
+    print_success "✅ Dracula SDDM theme already installed. Skipping git clone."
+else
+    # Clone the theme from GitHub into a temporary directory
+    run_command "git clone --depth 1 https://github.com/dracula/sddm.git /tmp/$THEME_NAME-sddm-temp" "Clone the Dracula SDDM theme" "no"
+
+    # Move the theme to the SDDM themes directory
+    if [ -d "/tmp/$THEME_NAME-sddm-temp" ]; then
+        run_command "mv /tmp/$THEME_NAME-sddm-temp $SDDM_THEMES_DIR/$THEME_NAME" "Move theme to system directory" "no"
+    else
+        print_error "Cloned theme directory not found. Exiting."
+    fi
+fi
+
+# Configure SDDM to use the Dracula theme
+SDDM_CONF="/etc/sddm.conf"
+if ! grep -q "^Current=$THEME_NAME" "$SDDM_CONF" 2>/dev/null; then
+    # Add or update the theme setting
+    if grep -q "\[Theme\]" "$SDDM_CONF"; then
+        run_command "sed -i '/^\[Theme\]/aCurrent=$THEME_NAME' $SDDM_CONF" "Set SDDM theme" "no"
+        print_success "✅ Set '$THEME_NAME' as the current SDDM theme."
+    else
+        # If the [Theme] section doesn't exist, create it.
+        run_command "echo -e \"\n[Theme]\nCurrent=$THEME_NAME\" | tee -a $SDDM_CONF" "Create and set SDDM theme" "no"
+        print_success "✅ Created [Theme] section and set '$THEME_NAME' as the current theme."
+    fi
+else
+    print_success "✅ SDDM theme is already set to '$THEME_NAME', skipping configuration."
+fi
+
+---
+
 print_success "\n✅ System-level setup is complete! Now starting user-level setup."
 
 # --- User-level tasks (executed as the user via sudo) ---
