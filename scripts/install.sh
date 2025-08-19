@@ -133,39 +133,12 @@ systemctl enable --now polkit.service
 systemctl enable sddm.service
 print_success "✅ System services enabled."
 
-# --- SDDM THEME REMOVED ---
-# This section has been removed to simplify the script and focus on core functionality.
-# You can manually install the SDDM theme after the script is working.
-# ---
-
 print_success "\n✅ System-level setup is complete! Now starting user-level setup."
 
 # --- User-level tasks (executed as the user via sudo) ---
 print_header "Starting User-Level Setup"
 
-# Install AUR helper (yay) and AUR packages
-print_header "Installing AUR Packages via yay"
-if ! command -v yay &>/dev/null; then
-    print_bold_blue "yay is not installed. Installing it from AUR..."
-    run_command "sudo -u '$USER_NAME' git clone https://aur.archlinux.org/yay.git /tmp/yay" "Clone yay repository" "no"
-    run_command "sudo -u '$USER_NAME' sh -c 'cd /tmp/yay && makepkg -si --noconfirm'" "Build and install yay" "no"
-    print_success "✅ yay installation complete."
-else
-    print_success "✅ yay is already installed, skipping installation."
-fi
-
-AUR_PACKAGES=(
-    tofi
-)
-if [ ${#AUR_PACKAGES[@]} -gt 0 ]; then
-    if [ "$CONFIRMATION" == "yes" ]; then
-        read -p "Install AUR packages (${AUR_PACKAGES[*]%%...})? Press Enter to continue..."
-    fi
-    if ! sudo -u "$USER_NAME" yay -S --noconfirm "${AUR_PACKAGES[@]:-}"; then
-        print_error "Failed to install AUR packages."
-    fi
-    print_success "✅ AUR packages installed."
-fi
+# No AUR packages to install in this version of the script.
 
 copy_configs() {
     local source_dir="$1"
@@ -190,21 +163,6 @@ copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
-copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
-copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
-
-# Copy the starship.toml file to the root of the .config directory
-print_success "Copying starship.toml to $CONFIG_DIR/starship.toml"
-if [ -f "$SCRIPT_DIR/configs/starship/starship.toml" ]; then
-    if sudo -u "$USER_NAME" cp "$SCRIPT_DIR/configs/starship/starship.toml" "$CONFIG_DIR/starship.toml"; then
-        print_success "✅ Copied starship.toml to ~/.config/starship.toml."
-    else
-        print_warning "Failed to copy starship.toml. The default configuration will be used."
-    fi
-else
-    print_warning "starship.toml not found in the source directory. The default configuration will be used."
-fi
-
 
 # --- Setting up GTK themes and icons from local zip files ---
 print_header "Setting up GTK themes and icons from local zip files"
@@ -224,10 +182,10 @@ print_success "✅ Local asset files confirmed."
 print_success "Installing Dracula GTK theme..."
 # Clean up any previous install to prevent overwrite errors
 sudo -u "$USER_NAME" rm -rf "$THEMES_DIR/dracula-gtk"
-# Unzip the file and move it to the correct directory name
+# Unzip the file
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
 if sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null; then
-    # Correctly rename the gtk-master folder to dracula-gtk
+    # Correctly rename the `gtk-master` folder to `dracula-gtk`
     if [ -d "$THEMES_DIR/gtk-master" ]; then
         print_success "Renaming 'gtk-master' to 'dracula-gtk'..."
         if ! sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/dracula-gtk"; then
@@ -251,16 +209,7 @@ sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
 # Unzip, but only proceed if the unzip command was successful
 if sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null; then
     # Find the unzipped folder and rename it correctly
-    ACTUAL_ICON_DIR=""
-    # This loop is safer as it won't fail if no directory is found.
-    for dir in "$ICONS_DIR"/*Dracula*; do
-      if [ -d "$dir" ]; then
-        ACTUAL_ICON_DIR="$dir"
-        break
-      fi
-    done
-    
-    # Now check if the variable is set and not an empty string
+    ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
     if [ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ]; then
         print_success "Renaming '$(basename "$ACTUAL_ICON_DIR")' to '$ICONS_DIR/Dracula'..."
         if ! sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"; then
@@ -275,22 +224,12 @@ fi
 print_success "✅ Dracula Icons installation completed."
 
 # The key addition: Update the icon cache to ensure icons are found by applications like Thunar.
-# This part was already well-implemented in your original script. I am keeping it.
 if command -v gtk-update-icon-cache &>/dev/null; then
     print_success "Updating the GTK icon cache for a smooth user experience..."
     sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/Dracula"
     print_success "✅ GTK icon cache updated successfully."
 else
     print_warning "gtk-update-icon-cache not found. Icons may not appear correctly until a reboot."
-fi
-
-# The missing piece: Install libgnome-desktop which provides gsettings.
-# This is crucial for persistent theming with GTK.
-if ! command -v gsettings &>/dev/null; then
-    print_header "Installing libgnome-desktop for persistent theming"
-    run_command "pacman -S --noconfirm libgnome-desktop" "Install libgnome-desktop"
-else
-    print_success "✅ gsettings already installed."
 fi
 
 GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
@@ -300,41 +239,49 @@ sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
 GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10"
 sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
 
-# This is a more reliable way to apply GTK themes and icons for many desktops.
 if command -v gsettings &>/dev/null; then
-    print_header "Applying GTK settings with gsettings"
-    run_command "sudo -u '$USER_NAME' gsettings set org.gnome.desktop.interface gtk-theme 'dracula-gtk'" "Set GTK 3/4 theme" "no"
-    run_command "sudo -u '$USER_NAME' gsettings set org.gnome.desktop.interface icon-theme 'Dracula'" "Set icon theme" "no"
-    print_success "✅ GTK settings applied with gsettings."
+    print_success "Using gsettings to apply GTK themes."
+    sudo -u "$USER_NAME" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
+    sudo -u "$USER_NAME" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
+    print_success "✅ Themes applied with gsettings."
 else
-    print_warning "gsettings not found. GTK themes and icons may not apply to all applications. The settings.ini file has been configured as a fallback."
+    print_warning "gsettings not found. Themes may not apply correctly to all applications."
 fi
 
-# Configure starship and fastfetch prompt
-print_header "Configuring Starship and Fastfetch prompt"
-# Ensure .bashrc exists for the user
-if [ ! -f "$USER_HOME/.bashrc" ]; then
-    print_warning "User's .bashrc not found. Creating a new one."
-    if ! sudo -u "$USER_NAME" touch "$USER_HOME/.bashrc"; then
-        print_error "Failed to create .bashrc for user '$USER_NAME'."
-    fi
-fi
+HYPR_VARS_FILE="$CONFIG_DIR/hypr/hypr-vars.conf"
+sudo -u "$USER_NAME" tee "$HYPR_VARS_FILE" >/dev/null <<'EOF_HYPR_VARS'
+# Set GTK theme and icon theme
+env = GTK_THEME,dracula-gtk
+env = ICON_THEME,Dracula
+# Set XDG desktop to Hyprland
+env = XDG_CURRENT_DESKTOP,Hyprland
+EOF_HYPR_VARS
 
-# Starship
-if ! sudo -u "$USER_NAME" grep -q "eval \"\$(starship init bash)\"" "$USER_HOME/.bashrc"; then
-    sudo -u "$USER_NAME" echo -e "\n# Starship prompt\neval \"\$(starship init bash)\"" >> "$USER_HOME/.bashrc"
-    print_success "✅ Added starship to .bashrc."
-else
-    print_success "✅ Starship already configured in .bashrc, skipping."
+# We are going to make sure that the hyprland.conf file sources all of the necessary configs that we are providing,
+# and also launches the required apps that we installed with pacman.
+print_header "Updating hyprland.conf with necessary 'exec-once' commands"
+HYPR_CONF="$CONFIG_DIR/hypr/hyprland.conf"
+# Sourced by the setup script to set GTK and icon themes
+if [ -f "$HYPR_CONF" ] && ! grep -q "source = $HYPR_VARS_FILE" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Sourced by the setup script to set GTK and icon themes\nsource = $HYPR_VARS_FILE" >> "$HYPR_CONF"
 fi
-
-# Fastfetch
-if ! sudo -u "$USER_NAME" grep -q "fastfetch" "$USER_HOME/.bashrc"; then
-    sudo -u "$USER_NAME" echo -e "\n# Run fastfetch on terminal startup\nfastfetch" >> "$USER_HOME/.bashrc"
-    print_success "✅ Added fastfetch to .bashrc."
-else
-    print_success "✅ Fastfetch already configured in .bashrc, skipping."
+# Launch hyprpaper for wallpaper management
+if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = hyprpaper" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Launch hyprpaper for wallpaper management\nexec-once = hyprpaper" >> "$HYPR_CONF"
 fi
+# Launch waybar
+if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = waybar" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Launch waybar, the status bar\nexec-once = waybar" >> "$HYPR_CONF"
+fi
+# Launch dunst for notifications
+if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = dunst" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Launch dunst, the notification daemon\nexec-once = dunst" >> "$HYPR_CONF"
+fi
+# Launch hypridle for power management and locking
+if [ -f "$HYPR_CONF" ] && ! grep -q "exec-once = hypridle" "$HYPR_CONF"; then
+    sudo -u "$USER_NAME" echo -e "\n# Launch hypridle for power management and locking\nexec-once = hypridle" >> "$HYPR_CONF"
+fi
+print_success "✅ hyprland.conf updated with core components."
 
 
 print_header "Creating backgrounds directory"
@@ -351,6 +298,32 @@ print_success "Copying backgrounds from '$WALLPAPER_SRC' to '$WALLPAPER_DEST'."
 sudo -u "$USER_NAME" mkdir -p "$WALLPAPER_DEST"
 sudo -u "$USER_NAME" cp -r "$WALLPAPER_SRC/." "$WALLPAPER_DEST"
 print_success "✅ Wallpapers copied to $WALLPAPER_DEST."
+
+print_header "Configuring hyprpaper"
+HYPRPAPER_CONF="$CONFIG_DIR/hypr/hyprpaper.conf"
+if [ ! -f "$HYPRPAPER_CONF" ]; then
+    print_warning "hyprpaper.conf not found, creating a new one."
+    # Create the file with the correct content
+    sudo -u "$USER_NAME" tee "$HYPRPAPER_CONF" >/dev/null <<'EOF_HYPRPAPER'
+# Preload your wallpaper
+# The path should be an absolute path to your wallpaper file
+preload = ~/.config/assets/backgrounds/default.png
+# set the wallpaper for a workspace
+wallpaper = ,~/.config/assets/backgrounds/default.png
+# Or to use a specific wallpaper for a specific monitor:
+# wallpaper = HDMI-A-1,~/.config/assets/backgrounds/default.png
+EOF_HYPRPAPER
+else
+    print_success "hyprpaper.conf exists, updating."
+    # Add preload and wallpaper lines if they don't exist
+    if ! sudo -u "$USER_NAME" grep -q "preload" "$HYPRPAPER_CONF"; then
+        sudo -u "$USER_NAME" echo "preload = ~/.config/assets/backgrounds/default.png" >> "$HYPRPAPER_CONF"
+    fi
+    if ! sudo -u "$USER_NAME" grep -q "wallpaper" "$HYPRPAPER_CONF"; then
+        sudo -u "$USER_NAME" echo "wallpaper = ,~/.config/assets/backgrounds/default.png" >> "$HYPR_CONF"
+    fi
+fi
+print_success "✅ hyprpaper configured."
 
 
 print_header "Setting up Thunar custom action"
@@ -370,6 +343,7 @@ if [ ! -f "$UCA_FILE" ]; then
         <description>Open kitty terminal in the current folder</description>
         <patterns>*</patterns>
         <directories_only>true</directories_only>
+        <startup_notify>true</startup_notify>
     </action>
 </actions>
 EOF_UCA
