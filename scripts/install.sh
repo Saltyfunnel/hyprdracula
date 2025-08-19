@@ -113,7 +113,6 @@ for app in "${AUR_APPS[@]}"; do
 done
 print_success "✅ All AUR apps installed."
 
-
 # --- GPU Driver Installation ---
 print_header "Installing GPU Drivers"
 GPU_INFO=$(lspci | grep -Ei "VGA|3D")
@@ -157,12 +156,13 @@ copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
 
-# Copy Starship config
-STARSHIP_SRC="$SCRIPT_DIR/config/starship"
-STARSHIP_DEST="$CONFIG_DIR/starship"
-if [ -d "$STARSHIP_SRC" ]; then
-    sudo -u "$USER_NAME" mkdir -p "$STARSHIP_DEST"
-    sudo -u "$USER_NAME" cp "$STARSHIP_SRC/starship.toml" "$STARSHIP_DEST/"
+# Copy Starship config to the root of ~/.config
+STARSHIP_SRC="$SCRIPT_DIR/configs/starship/starship.toml"
+if [ -f "$STARSHIP_SRC" ]; then
+    sudo -u "$USER_NAME" cp "$STARSHIP_SRC" "$CONFIG_DIR/"
+    print_success "✅ Copied starship.toml to $CONFIG_DIR"
+else
+    print_warning "starship.toml not found in configs/starship/"
 fi
 
 # Update .bashrc
