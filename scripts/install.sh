@@ -166,6 +166,24 @@ copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
 
+# --- Copy Starship config ---
+print_header "Copying Starship config"
+
+STARSHIP_SRC="$(dirname "${BASH_SOURCE[0]}")/../config/starship"
+STARSHIP_DEST="$CONFIG_DIR/starship"
+
+if [ ! -d "$STARSHIP_SRC" ]; then
+    print_warning "Starship config source directory not found: $STARSHIP_SRC"
+else
+    sudo -u "$USER_NAME" mkdir -p "$STARSHIP_DEST"
+    if sudo -u "$USER_NAME" cp "$STARSHIP_SRC/starship.toml" "$STARSHIP_DEST/"; then
+        print_success "✅ Starship config copied to $STARSHIP_DEST"
+    else
+        print_warning "Failed to copy Starship config."
+    fi
+fi
+
+
 # --- Setting up GTK themes and icons from local zip files ---
 print_header "Setting up GTK themes and icons from local zip files"
 THEMES_DIR="$USER_HOME/.themes"
