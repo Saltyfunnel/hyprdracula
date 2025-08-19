@@ -104,7 +104,6 @@ fi
 print_header "Installing AUR apps via yay"
 AUR_APPS=(
     tofi
-    # Add more AUR apps here, one per line
 )
 
 for app in "${AUR_APPS[@]}"; do
@@ -149,6 +148,7 @@ copy_configs() {
     print_success "✅ Copied $config_name."
 }
 
+# Copy standard configs
 copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
 copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
@@ -156,10 +156,22 @@ copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
 
-# Copy Starship config to root of .config
+# Copy starship.toml to root of ~/.config
 STARSHIP_SRC="$SCRIPT_DIR/configs/starship/starship.toml"
 if [ -f "$STARSHIP_SRC" ]; then
-    sudo -u "$USER_NAME" cp "$STARSHIP_SRC" "$CONFIG_DIR/starship.toml"
+    sudo -u "$USER_NAME" cp "$STARSHIP_SRC" "$CONFIG_DIR/"
+    print_success "✅ Copied starship.toml to $CONFIG_DIR"
+fi
+
+# Copy assets folder to ~/.config
+ASSETS_SRC="$SCRIPT_DIR/assets"
+ASSETS_DEST="$CONFIG_DIR/assets"
+if [ -d "$ASSETS_SRC" ]; then
+    sudo -u "$USER_NAME" mkdir -p "$ASSETS_DEST"
+    sudo -u "$USER_NAME" cp -r "$ASSETS_SRC/." "$ASSETS_DEST"
+    print_success "✅ Assets folder copied to $ASSETS_DEST."
+else
+    print_warning "Assets folder not found at $ASSETS_SRC."
 fi
 
 # Update .bashrc
@@ -177,28 +189,16 @@ append_if_missing "$BASHRC" "eval \"\$(starship init bash)\""
 # --- GTK Themes and Icons ---
 THEMES_DIR="$USER_HOME/.themes"
 ICONS_DIR="$USER_HOME/.icons"
-ASSETS_DIR="$SCRIPT_DIR/assets"
 
-[ -f "$ASSETS_DIR/dracula-gtk-master.zip" ] || print_error "GTK theme archive missing"
-[ -f "$ASSETS_DIR/Dracula.zip" ] || print_error "Icons archive missing"
+[ -f "$ASSETS_DEST/dracula-gtk-master.zip" ] || print_error "GTK theme archive missing"
+[ -f "$ASSETS_DEST/Dracula.zip" ] || print_error "Icons archive missing"
 
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR" "$ICONS_DIR"
 
-# Extract GTK theme safely
-sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR"
-EXTRACTED_THEME_DIR="$THEMES_DIR/gtk-master"
-TARGET_THEME_DIR="$THEMES_DIR/dracula-gtk"
+sudo -u "$USER_NAME" unzip -o "$ASSETS_DEST/dracula-gtk-master.zip" -d "$THEMES_DIR"
+[ -d "$THEMES_DIR/gtk-master" ] && sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/dracula-gtk"
 
-if [ -d "$TARGET_THEME_DIR" ]; then
-    sudo -u "$USER_NAME" rm -rf "$TARGET_THEME_DIR"
-fi
-
-if [ -d "$EXTRACTED_THEME_DIR" ]; then
-    sudo -u "$USER_NAME" mv "$EXTRACTED_THEME_DIR" "$TARGET_THEME_DIR"
-fi
-
-# Extract icon theme
-sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR"
+sudo -u "$USER_NAME" unzip -o "$ASSETS_DEST/Dracula.zip" -d "$ICONS_DIR"
 ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
 [ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ] && sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"
 
