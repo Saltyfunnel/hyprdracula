@@ -293,7 +293,18 @@ sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/set
 print_header "Applying GTK themes with gsettings and restarting Thunar"
 # Define the variables in the main script to ensure they are set
 USER_UID=$(getent passwd "$USER_NAME" | cut -d: -f3)
+
+# Add a quick check to see if the UID was retrieved correctly.
+if [ -z "$USER_UID" ]; then
+    print_error "Could not retrieve UID for user '$USER_NAME'. Exiting."
+fi
+
 DBUS_PATH="unix:path=/run/user/${USER_UID}/bus"
+
+# Now we check if the DBus path actually exists before we try to use it.
+if [ ! -S "$DBUS_PATH" ]; then
+    print_warning "The DBus session bus file was not found at '$DBUS_PATH'. This may cause gsettings and Thunar commands to fail. The script will continue, but the theme may not apply correctly until after a reboot."
+fi
 
 sudo -u "$USER_NAME" bash -s -- "$DBUS_PATH" <<EOF_GSETTINGS
     set -euo pipefail
