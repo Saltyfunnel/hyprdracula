@@ -286,13 +286,19 @@ GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracul
 sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
 
 # --- New, robust block to handle gsettings and Thunar restart ---
+# The previous version had an "unbound variable" error because the USER_UID and
+# DBUS_PATH variables were not reliably set inside the new shell.
+# This version now gets the user's UID and builds the DBUS path in the parent script,
+# then passes the DBUS_PATH as an argument to the subshell for reliable access.
 print_header "Applying GTK themes with gsettings and restarting Thunar"
-sudo -u "$USER_NAME" bash <<EOF_GSETTINGS
+# Define the variables in the main script to ensure they are set
+USER_UID=$(getent passwd "$USER_NAME" | cut -d: -f3)
+DBUS_PATH="unix:path=/run/user/${USER_UID}/bus"
+
+sudo -u "$USER_NAME" bash -s -- "$DBUS_PATH" <<EOF_GSETTINGS
     set -euo pipefail
-    
-    # Get the user's UID and DBUS path in the correct context
-    USER_UID=$(id -u)
-    DBUS_PATH="unix:path=/run/user/${USER_UID}/bus"
+    # The DBUS path is passed as the first argument to this subshell
+    local DBUS_PATH="$1"
     
     # GSettings commands
     if command -v gsettings &>/dev/null; then
