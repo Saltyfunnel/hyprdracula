@@ -182,6 +182,29 @@ else
         print_warning "Failed to copy Starship config."
     fi
 fi
+# --- Update .bashrc for fastfetch and starship ---
+print_header "Updating .bashrc for fastfetch and starship"
+
+BASHRC="$USER_HOME/.bashrc"
+
+# Lines to add
+FASTFETCH_LINE="fastfetch"
+STARSHIP_LINE="eval \"\$(starship init bash)\""
+
+# Function to append if not already present
+append_if_missing() {
+    local file="$1"
+    local line="$2"
+    if ! grep -Fxq "$line" "$file"; then
+        echo "$line" | sudo -u "$USER_NAME" tee -a "$file" >/dev/null
+        print_success "✅ Added '$line' to $file"
+    else
+        print_success "ℹ '$line' already present in $file"
+    fi
+}
+
+append_if_missing "$BASHRC" "$FASTFETCH_LINE"
+append_if_missing "$BASHRC" "$STARSHIP_LINE"
 
 
 # --- Setting up GTK themes and icons from local zip files ---
