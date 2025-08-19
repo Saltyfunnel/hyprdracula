@@ -45,10 +45,11 @@ if [ "$EUID" -ne 0 ]; then
     print_error "This script must be run as root. Please run with 'sudo bash $0'."
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 CONFIG_DIR="$USER_HOME/.config"
+ASSETS_DEST="$CONFIG_DIR/assets"
 CONFIRMATION="yes"
 
 if [[ $# -eq 1 && "$1" == "--noconfirm" ]]; then
@@ -61,18 +62,14 @@ fi
 # --- Pre-run checks ---
 print_header "Running Pre-run Checks"
 
-if [ ! -d "$SCRIPT_DIR/configs" ]; then
-    print_error "Required 'configs' directory not found in $SCRIPT_DIR"
-fi
+[ -d "$SCRIPT_DIR/configs" ] || print_error "Required 'configs' directory not found in $SCRIPT_DIR"
+[ -d "$SCRIPT_DIR/assets" ] || print_error "Required 'assets' directory not found in $SCRIPT_DIR"
 print_success "✅ File structure confirmed."
 
-if ! command -v git &>/dev/null; then
-    print_error "git is not installed. Please install it with 'sudo pacman -S git'."
-fi
-if ! command -v curl &>/dev/null; then
-    print_error "curl is not installed. Please install it with 'sudo pacman -S curl'."
-fi
-print_success "✅ Required tools (git, curl) confirmed."
+for tool in git curl unzip; do
+    command -v $tool &>/dev/null || print_error "$tool is not installed. Please install it."
+done
+print_success "✅ Required tools confirmed."
 
 # --- System-level tasks ---
 print_header "Starting System-Level Setup"
@@ -90,7 +87,6 @@ print_success "✅ System updated and packages installed."
 # --- AUR Helper: yay Installation ---
 print_header "Installing yay (AUR helper)"
 YAY_DIR="$USER_HOME/yay"
-
 if [ ! -d "$YAY_DIR" ]; then
     sudo -u "$USER_NAME" git clone https://aur.archlinux.org/yay.git "$YAY_DIR"
     cd "$YAY_DIR"
@@ -102,11 +98,7 @@ fi
 
 # --- AUR Apps Installation ---
 print_header "Installing AUR apps via yay"
-AUR_APPS=(
-    tofi
-    # Add more AUR apps here, one per line
-)
-
+AUR_APPS=(tofi)
 for app in "${AUR_APPS[@]}"; do
     print_header "Installing $app via yay"
     sudo -u "$USER_NAME" yay -S --noconfirm "$app"
@@ -116,7 +108,6 @@ print_success "✅ All AUR apps installed."
 # --- GPU Driver Installation ---
 print_header "Installing GPU Drivers"
 GPU_INFO=$(lspci | grep -Ei "VGA|3D")
-
 if echo "$GPU_INFO" | grep -qi "nvidia"; then
     print_bold_blue "NVIDIA GPU detected."
     pacman -S --noconfirm nvidia nvidia-utils nvidia-settings
@@ -131,7 +122,6 @@ else
 fi
 print_success "✅ GPU driver installation complete."
 
-# Enable services
 systemctl enable --now polkit.service
 systemctl enable sddm.service
 print_success "✅ System services enabled."
@@ -156,13 +146,10 @@ copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
 copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
 
-# Copy Starship config to the root of ~/.config
+# Copy starship.toml to root of ~/.config
 STARSHIP_SRC="$SCRIPT_DIR/configs/starship/starship.toml"
 if [ -f "$STARSHIP_SRC" ]; then
-    sudo -u "$USER_NAME" cp "$STARSHIP_SRC" "$CONFIG_DIR/"
-    print_success "✅ Copied starship.toml to $CONFIG_DIR"
-else
-    print_warning "starship.toml not found in configs/starship/"
+    sudo -u "$USER_NAME" cp "$STARSHIP_SRC" "$CONFIG_DIR/starship.toml"
 fi
 
 # Update .bashrc
@@ -180,30 +167,38 @@ append_if_missing "$BASHRC" "eval \"\$(starship init bash)\""
 # --- GTK Themes and Icons ---
 THEMES_DIR="$USER_HOME/.themes"
 ICONS_DIR="$USER_HOME/.icons"
-ASSETS_DIR="$SCRIPT_DIR/assets"
 
-[ -f "$ASSETS_DIR/dracula-gtk-master.zip" ] || print_error "GTK theme archive missing"
-[ -f "$ASSETS_DIR/Dracula.zip" ] || print_error "Icons archive missing"
+sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR" "$ICONS_DIR" "$ASSETS_DEST"
+sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/assets/." "$ASSETS_DEST"
 
-sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR" "$ICONS_DIR"
+GTK_ZIP="$ASSETS_DEST/dracula-gtk-master.zip"
+ICON_ZIP="$ASSETS_DEST/Dracula.zip"
 
-sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR"
-[ -d "$THEMES_DIR/gtk-master" ] && sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/dracula-gtk"
+[ -f "$GTK_ZIP" ] || print_error "GTK theme archive missing at $GTK_ZIP"
+[ -f "$ICON_ZIP" ] || print_error "Icons archive missing at $ICON_ZIP"
 
-sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR"
-ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
-[ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ] && sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"
+# Extract GTK theme
+sudo -u "$USER_NAME" unzip -o "$GTK_ZIP" -d "$THEMES_DIR"
+EXTRACTED_GTK_DIR=$(find "$THEMES_DIR" -maxdepth 1 -type d -name "*gtk*" | head -n 1)
+[ -n "$EXTRACTED_GTK_DIR" ] && [ "$(basename "$EXTRACTED_GTK_DIR")" != "dracula-gtk" ] && \
+    sudo -u "$USER_NAME" mv "$EXTRACTED_GTK_DIR" "$THEMES_DIR/dracula-gtk"
+
+# Extract Icons
+sudo -u "$USER_NAME" unzip -o "$ICON_ZIP" -d "$ICONS_DIR"
+EXTRACTED_ICON_DIR=$(find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
+[ -n "$EXTRACTED_ICON_DIR" ] && [ "$(basename "$EXTRACTED_ICON_DIR")" != "Dracula" ] && \
+    sudo -u "$USER_NAME" mv "$EXTRACTED_ICON_DIR" "$ICONS_DIR/Dracula"
 
 # Update icon cache
 command -v gtk-update-icon-cache &>/dev/null && \
 sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/Dracula"
 
-# Apply GTK and icon themes via gsettings (fixed)
+# Apply GTK and icon themes via gsettings
 USER_DBUS="unix:path=/run/user/$(id -u $USER_NAME)/bus"
 sudo -u "$USER_NAME" DBUS_SESSION_BUS_ADDRESS="$USER_DBUS" \
-gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
+    gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
 sudo -u "$USER_NAME" DBUS_SESSION_BUS_ADDRESS="$USER_DBUS" \
-gsettings set org.gnome.desktop.interface icon-theme "Dracula"
+    gsettings set org.gnome.desktop.interface icon-theme "Dracula"
 
 print_success "✅ GTK theme and icon theme applied successfully via gsettings."
 
