@@ -83,6 +83,10 @@ print_success "✅ Required tools (git, curl) confirmed."
 # --- System-level tasks ---
 print_header "Starting System-Level Setup"
 
+# Ensure core utilities are installed first
+print_header "Installing Core Utilities"
+run_command "pacman -S --noconfirm sed grep coreutils" "Install core utilities (sed, grep, tee)" "no"
+
 # Update system and install required packages with pacman
 if [ "$CONFIRMATION" == "yes" ]; then
     read -p "Update system and install packages? Press Enter to continue..."
@@ -94,7 +98,6 @@ PACKAGES=(
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
     waybar hyprland hyprpaper hypridle hyprlock starship fastfetch
-    sed grep coreutils
 )
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
