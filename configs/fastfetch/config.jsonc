@@ -1,10 +1,16 @@
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
   "logo": {
-    "source": "$(find \"${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/pngs/\" -name \"*.png\" | sort -R | head -1)",
-    "height": 28,
-    "padding": { "top": 3, "right": 4, "bottom": 1, "left": 4 }
-  },
+    "type": "builtin",
+    "source": "arch",
+    "padding": {
+      "top": 1,
+      "left": 4
+    },
+    "color": {
+      "1": "#bd93f9"   // Dracula purple
+    }
+},
   "display": {
     "separator": "\u001b[38;2;248;248;242m : "
   },
