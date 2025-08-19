@@ -246,7 +246,16 @@ sudo -u "$USER_NAME" mkdir -p "$ICONS_DIR"
 # Unzip, but only proceed if the unzip command was successful
 if sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR" >/dev/null; then
     # Find the unzipped folder and rename it correctly
-    ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
+    ACTUAL_ICON_DIR=""
+    # This loop is safer as it won't fail if no directory is found.
+    for dir in "$ICONS_DIR"/*Dracula*; do
+      if [ -d "$dir" ]; then
+        ACTUAL_ICON_DIR="$dir"
+        break
+      fi
+    done
+    
+    # Now check if the variable is set and not an empty string
     if [ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ]; then
         print_success "Renaming '$(basename "$ACTUAL_ICON_DIR")' to '$ICONS_DIR/Dracula'..."
         if ! sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"; then
