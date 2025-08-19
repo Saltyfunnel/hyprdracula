@@ -46,10 +46,10 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 CONFIG_DIR="$USER_HOME/.config"
-ASSETS_DEST="$CONFIG_DIR/assets"
 CONFIRMATION="yes"
 
 if [[ $# -eq 1 && "$1" == "--noconfirm" ]]; then
@@ -62,14 +62,18 @@ fi
 # --- Pre-run checks ---
 print_header "Running Pre-run Checks"
 
-[ -d "$SCRIPT_DIR/configs" ] || print_error "Required 'configs' directory not found in $SCRIPT_DIR"
-[ -d "$SCRIPT_DIR/assets" ] || print_error "Required 'assets' directory not found in $SCRIPT_DIR"
+[ -d "$REPO_ROOT/configs" ] || print_error "Required 'configs' directory not found in $REPO_ROOT"
+[ -d "$REPO_ROOT/assets" ] || print_error "Required 'assets' directory not found in $REPO_ROOT"
+
 print_success "✅ File structure confirmed."
 
-for tool in git curl unzip; do
-    command -v $tool &>/dev/null || print_error "$tool is not installed. Please install it."
-done
-print_success "✅ Required tools confirmed."
+if ! command -v git &>/dev/null; then
+    print_error "git is not installed. Please install it with 'sudo pacman -S git'."
+fi
+if ! command -v curl &>/dev/null; then
+    print_error "curl is not installed. Please install it with 'sudo pacman -S curl'."
+fi
+print_success "✅ Required tools (git, curl) confirmed."
 
 # --- System-level tasks ---
 print_header "Starting System-Level Setup"
@@ -87,6 +91,7 @@ print_success "✅ System updated and packages installed."
 # --- AUR Helper: yay Installation ---
 print_header "Installing yay (AUR helper)"
 YAY_DIR="$USER_HOME/yay"
+
 if [ ! -d "$YAY_DIR" ]; then
     sudo -u "$USER_NAME" git clone https://aur.archlinux.org/yay.git "$YAY_DIR"
     cd "$YAY_DIR"
@@ -98,7 +103,10 @@ fi
 
 # --- AUR Apps Installation ---
 print_header "Installing AUR apps via yay"
-AUR_APPS=(tofi)
+AUR_APPS=(
+    tofi
+)
+
 for app in "${AUR_APPS[@]}"; do
     print_header "Installing $app via yay"
     sudo -u "$USER_NAME" yay -S --noconfirm "$app"
@@ -108,6 +116,7 @@ print_success "✅ All AUR apps installed."
 # --- GPU Driver Installation ---
 print_header "Installing GPU Drivers"
 GPU_INFO=$(lspci | grep -Ei "VGA|3D")
+
 if echo "$GPU_INFO" | grep -qi "nvidia"; then
     print_bold_blue "NVIDIA GPU detected."
     pacman -S --noconfirm nvidia nvidia-utils nvidia-settings
@@ -122,6 +131,7 @@ else
 fi
 print_success "✅ GPU driver installation complete."
 
+# Enable services
 systemctl enable --now polkit.service
 systemctl enable sddm.service
 print_success "✅ System services enabled."
@@ -139,17 +149,18 @@ copy_configs() {
     print_success "✅ Copied $config_name."
 }
 
-copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
-copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
-copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
-copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
-copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
-copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
+copy_configs "$REPO_ROOT/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
+copy_configs "$REPO_ROOT/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
+copy_configs "$REPO_ROOT/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
+copy_configs "$REPO_ROOT/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
+copy_configs "$REPO_ROOT/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
+copy_configs "$REPO_ROOT/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
 
-# Copy starship.toml to root of ~/.config
-STARSHIP_SRC="$SCRIPT_DIR/configs/starship/starship.toml"
+# Copy Starship config to root of .config
+STARSHIP_SRC="$REPO_ROOT/configs/starship/starship.toml"
 if [ -f "$STARSHIP_SRC" ]; then
-    sudo -u "$USER_NAME" cp "$STARSHIP_SRC" "$CONFIG_DIR/starship.toml"
+    sudo -u "$USER_NAME" cp "$STARSHIP_SRC" "$CONFIG_DIR/"
+    print_success "✅ Starship config copied to $CONFIG_DIR"
 fi
 
 # Update .bashrc
@@ -167,27 +178,19 @@ append_if_missing "$BASHRC" "eval \"\$(starship init bash)\""
 # --- GTK Themes and Icons ---
 THEMES_DIR="$USER_HOME/.themes"
 ICONS_DIR="$USER_HOME/.icons"
+ASSETS_DIR="$REPO_ROOT/assets"
 
-sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR" "$ICONS_DIR" "$ASSETS_DEST"
-sudo -u "$USER_NAME" cp -r "$SCRIPT_DIR/assets/." "$ASSETS_DEST"
+[ -f "$ASSETS_DIR/dracula-gtk-master.zip" ] || print_error "GTK theme archive missing"
+[ -f "$ASSETS_DIR/Dracula.zip" ] || print_error "Icons archive missing"
 
-GTK_ZIP="$ASSETS_DEST/dracula-gtk-master.zip"
-ICON_ZIP="$ASSETS_DEST/Dracula.zip"
+sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR" "$ICONS_DIR"
 
-[ -f "$GTK_ZIP" ] || print_error "GTK theme archive missing at $GTK_ZIP"
-[ -f "$ICON_ZIP" ] || print_error "Icons archive missing at $ICON_ZIP"
+sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR"
+[ -d "$THEMES_DIR/gtk-master" ] && sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/dracula-gtk"
 
-# Extract GTK theme
-sudo -u "$USER_NAME" unzip -o "$GTK_ZIP" -d "$THEMES_DIR"
-EXTRACTED_GTK_DIR=$(find "$THEMES_DIR" -maxdepth 1 -type d -name "*gtk*" | head -n 1)
-[ -n "$EXTRACTED_GTK_DIR" ] && [ "$(basename "$EXTRACTED_GTK_DIR")" != "dracula-gtk" ] && \
-    sudo -u "$USER_NAME" mv "$EXTRACTED_GTK_DIR" "$THEMES_DIR/dracula-gtk"
-
-# Extract Icons
-sudo -u "$USER_NAME" unzip -o "$ICON_ZIP" -d "$ICONS_DIR"
-EXTRACTED_ICON_DIR=$(find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
-[ -n "$EXTRACTED_ICON_DIR" ] && [ "$(basename "$EXTRACTED_ICON_DIR")" != "Dracula" ] && \
-    sudo -u "$USER_NAME" mv "$EXTRACTED_ICON_DIR" "$ICONS_DIR/Dracula"
+sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/Dracula.zip" -d "$ICONS_DIR"
+ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
+[ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ] && sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"
 
 # Update icon cache
 command -v gtk-update-icon-cache &>/dev/null && \
@@ -196,9 +199,9 @@ sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/Dracula"
 # Apply GTK and icon themes via gsettings
 USER_DBUS="unix:path=/run/user/$(id -u $USER_NAME)/bus"
 sudo -u "$USER_NAME" DBUS_SESSION_BUS_ADDRESS="$USER_DBUS" \
-    gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
+gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
 sudo -u "$USER_NAME" DBUS_SESSION_BUS_ADDRESS="$USER_DBUS" \
-    gsettings set org.gnome.desktop.interface icon-theme "Dracula"
+gsettings set org.gnome.desktop.interface icon-theme "Dracula"
 
 print_success "✅ GTK theme and icon theme applied successfully via gsettings."
 
