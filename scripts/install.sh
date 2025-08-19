@@ -290,6 +290,16 @@ sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
 GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10"
 sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
 
+# --- New block to apply gsettings ---
+# This is a more reliable way to apply GTK themes and icons for many desktops.
+if command -v gsettings &>/dev/null; then
+    print_header "Applying GTK settings with gsettings"
+    run_command "sudo -u '$USER_NAME' gsettings set org.gnome.desktop.interface gtk-theme 'dracula-gtk'" "Set GTK 3/4 theme" "no"
+    run_command "sudo -u '$USER_NAME' gsettings set org.gnome.desktop.interface icon-theme 'Dracula'" "Set icon theme" "no"
+    print_success "✅ GTK settings applied with gsettings."
+else
+    print_warning "gsettings not found. GTK themes and icons may not apply to all applications. The settings.ini file has been configured as a fallback."
+fi
 # --- End of new block ---
 
 # Configure starship and fastfetch prompt
