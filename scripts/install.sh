@@ -87,6 +87,33 @@ PACKAGES=(
 pacman -Syu "${PACKAGES[@]:-}" --noconfirm
 print_success "✅ System updated and packages installed."
 
+# --- AUR Helper: yay Installation ---
+print_header "Installing yay (AUR helper)"
+YAY_DIR="$USER_HOME/yay"
+
+if [ ! -d "$YAY_DIR" ]; then
+    sudo -u "$USER_NAME" git clone https://aur.archlinux.org/yay.git "$YAY_DIR"
+    cd "$YAY_DIR"
+    sudo -u "$USER_NAME" makepkg -si --noconfirm
+    cd "$SCRIPT_DIR" || exit
+else
+    print_success "✅ yay already installed."
+fi
+
+# --- AUR Apps Installation ---
+print_header "Installing AUR apps via yay"
+AUR_APPS=(
+    tofi
+    # Add more AUR apps here, one per line
+)
+
+for app in "${AUR_APPS[@]}"; do
+    print_header "Installing $app via yay"
+    sudo -u "$USER_NAME" yay -S --noconfirm "$app"
+done
+print_success "✅ All AUR apps installed."
+
+
 # --- GPU Driver Installation ---
 print_header "Installing GPU Drivers"
 GPU_INFO=$(lspci | grep -Ei "VGA|3D")
