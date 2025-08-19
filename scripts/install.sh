@@ -224,10 +224,10 @@ print_success "✅ Local asset files confirmed."
 print_success "Installing Dracula GTK theme..."
 # Clean up any previous install to prevent overwrite errors
 sudo -u "$USER_NAME" rm -rf "$THEMES_DIR/dracula-gtk"
-# Unzip the file
+# Unzip the file and move it to the correct directory name
 sudo -u "$USER_NAME" mkdir -p "$THEMES_DIR"
 if sudo -u "$USER_NAME" unzip -o "$ASSETS_DIR/dracula-gtk-master.zip" -d "$THEMES_DIR" >/dev/null; then
-    # Correctly rename the `gtk-master` folder to `dracula-gtk`
+    # Correctly rename the gtk-master folder to dracula-gtk
     if [ -d "$THEMES_DIR/gtk-master" ]; then
         print_success "Renaming 'gtk-master' to 'dracula-gtk'..."
         if ! sudo -u "$USER_NAME" mv "$THEMES_DIR/gtk-master" "$THEMES_DIR/dracula-gtk"; then
@@ -275,6 +275,7 @@ fi
 print_success "✅ Dracula Icons installation completed."
 
 # The key addition: Update the icon cache to ensure icons are found by applications like Thunar.
+# This part was already well-implemented in your original script. I am keeping it.
 if command -v gtk-update-icon-cache &>/dev/null; then
     print_success "Updating the GTK icon cache for a smooth user experience..."
     sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/Dracula"
@@ -283,7 +284,7 @@ else
     print_warning "gtk-update-icon-cache not found. Icons may not appear correctly until a reboot."
 fi
 
-# The missing piece: Install `libgnome-desktop` which provides `gsettings`.
+# The missing piece: Install libgnome-desktop which provides gsettings.
 # This is crucial for persistent theming with GTK.
 if ! command -v gsettings &>/dev/null; then
     print_header "Installing libgnome-desktop for persistent theming"
