@@ -93,7 +93,7 @@ PACKAGES=(
     sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
-    waybar hyprland hyprpaper hypridle hyprlock starship fastfetch rofi
+    waybar hyprland hyprpaper hypridle hyprlock starship fastfetch
 )
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
@@ -138,7 +138,29 @@ print_success "\n✅ System-level setup is complete! Now starting user-level set
 # --- User-level tasks (executed as the user via sudo) ---
 print_header "Starting User-Level Setup"
 
-# No AUR packages to install in this version of the script.
+# Install AUR helper (yay) and AUR packages
+print_header "Installing AUR Packages via yay"
+if ! command -v yay &>/dev/null; then
+    print_bold_blue "yay is not installed. Installing it from AUR..."
+    run_command "sudo -u '$USER_NAME' git clone https://aur.archlinux.org/yay.git /tmp/yay" "Clone yay repository" "no"
+    run_command "sudo -u '$USER_NAME' sh -c 'cd /tmp/yay && makepkg -si --noconfirm'" "Build and install yay" "no"
+    print_success "✅ yay installation complete."
+else
+    print_success "✅ yay is already installed, skipping installation."
+fi
+
+AUR_PACKAGES=(
+    tofi
+)
+if [ ${#AUR_PACKAGES[@]} -gt 0 ]; then
+    if [ "$CONFIRMATION" == "yes" ]; then
+        read -p "Install AUR packages (${AUR_PACKAGES[*]%%...})? Press Enter to continue..."
+    fi
+    if ! sudo -u "$USER_NAME" yay -S --noconfirm "${AUR_PACKAGES[@]:-}"; then
+        print_error "Failed to install AUR packages."
+    fi
+    print_success "✅ AUR packages installed."
+fi
 
 copy_configs() {
     local source_dir="$1"
@@ -164,7 +186,7 @@ copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
-copy_configs "$SCRIPT_DIR/configs/rofi" "$CONFIG_DIR/rofi" "Rofi"
+copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
 
 # Copy the starship.toml file to the root of the .config directory
 print_success "Copying starship.toml to $CONFIG_DIR/starship.toml"
@@ -260,14 +282,14 @@ sudo -u "$USER_NAME" bash <<EOF_GSETTINGS
     set -euo pipefail
     
     # Get the user's UID and DBUS path in the correct context
-    USER_UID=\$(id -u)
-    DBUS_PATH="unix:path=/run/user/\${USER_UID}/bus"
+    USER_UID=$(id -u)
+    DBUS_PATH="unix:path=/run/user/${USER_UID}/bus"
     
     # GSettings commands
     if command -v gsettings &>/dev/null; then
         echo 'Using gsettings to apply GTK themes.'
-        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
-        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
+        env DBUS_SESSION_BUS_ADDRESS="${DBUS_PATH}" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
+        env DBUS_SESSION_BUS_ADDRESS="${DBUS_PATH}" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
         echo '✅ Themes applied with gsettings.'
     else
         echo 'gsettings not found. Themes may not apply correctly to all applications.'
@@ -276,8 +298,8 @@ sudo -u "$USER_NAME" bash <<EOF_GSETTINGS
     # Thunar restart commands
     if command -v thunar &>/dev/null; then
         echo 'Restarting Thunar to apply changes'
-        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" pkill thunar || true
-        env DBUS_SESSION_BUS_ADDRESS="\${DBUS_PATH}" thunar &
+        env DBUS_SESSION_BUS_ADDRESS="${DBUS_PATH}" pkill thunar || true
+        env DBUS_SESSION_BUS_ADDRESS="${DBUS_PATH}" thunar &
         echo '✅ Thunar restarted successfully.'
     else
         echo 'Thunar not found, skipping restart.'
