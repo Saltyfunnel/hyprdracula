@@ -285,49 +285,6 @@ sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
 GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10"
 sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
 
-# --- New, robust block to handle gsettings and Thunar restart ---
-print_header "Applying GTK themes with gsettings and restarting Thunar"
-# Define the variables in the main script to ensure they are set
-USER_UID=$(getent passwd "$USER_NAME" | cut -d: -f3)
-
-# Add a quick check to see if the UID was retrieved correctly.
-if [ -z "$USER_UID" ]; then
-    print_warning "Could not retrieve UID for user '$USER_NAME'. Skipping gsettings and Thunar restart."
-    # We will exit gracefully from this section and continue the script
-else
-    DBUS_PATH="unix:path=/run/user/${USER_UID}/bus"
-
-    # Now we check if the DBus path actually exists before we try to use it.
-    if [ ! -S "$DBUS_PATH" ]; then
-        print_warning "The DBus session bus file was not found at '$DBUS_PATH'. This may cause gsettings and Thunar commands to fail. The script will continue, but the theme may not apply correctly until after a reboot."
-    else
-        sudo -u "$USER_NAME" bash -s -- "$DBUS_PATH" <<EOF_GSETTINGS
-            set -euo pipefail
-            # The DBUS path is passed as the first argument to this subshell
-            local DBUS_PATH="$1"
-            
-            # GSettings commands
-            if command -v gsettings &>/dev/null; then
-                echo 'Using gsettings to apply GTK themes.'
-                env DBUS_SESSION_BUS_ADDRESS="${DBUS_PATH}" gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
-                env DBUS_SESSION_BUS_ADDRESS="${DBUS_PATH}" gsettings set org.gnome.desktop.interface icon-theme "Dracula"
-                echo '✅ Themes applied with gsettings.'
-            else
-                echo 'gsettings not found. Themes may not apply correctly to all applications.'
-            fi
-            
-            # Thunar restart commands
-            if command -v thunar &>/dev/null; then
-                echo 'Restarting Thunar to apply changes'
-                env DBUS_SESSION_BUS_ADDRESS="${DBUS_PATH}" pkill thunar || true
-                env DBUS_SESSION_BUS_ADDRESS="${DBUS_PATH}" thunar &
-                echo '✅ Thunar restarted successfully.'
-            else
-                echo 'Thunar not found, skipping restart.'
-            fi
-EOF_GSETTINGS
-    fi
-fi
 # --- End of new block ---
 
 # Configure starship and fastfetch prompt
