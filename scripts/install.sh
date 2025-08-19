@@ -83,9 +83,12 @@ print_success "✅ Required tools (git, curl) confirmed."
 # --- System-level tasks ---
 print_header "Starting System-Level Setup"
 
-# Ensure core utilities are installed first
+# Ensure core utilities are installed first, explicitly, to avoid path issues
 print_header "Installing Core Utilities"
-run_command "pacman -S --noconfirm sed grep coreutils" "Install core utilities (sed, grep, tee)" "no"
+if ! pacman -S --noconfirm sed grep coreutils; then
+    print_error "Failed to install core utilities (sed, grep, tee)."
+fi
+print_success "✅ Core utilities installed."
 
 # Update system and install required packages with pacman
 if [ "$CONFIRMATION" == "yes" ]; then
