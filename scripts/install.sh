@@ -294,24 +294,28 @@ sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/set
 
 # Configure starship and fastfetch prompt
 print_header "Configuring Starship and Fastfetch prompt"
-if [ -f "$USER_HOME/.bashrc" ]; then
-    # Starship
-    if ! sudo -u "$USER_NAME" grep -q "eval \"\$(starship init bash)\"" "$USER_HOME/.bashrc"; then
-        sudo -u "$USER_NAME" echo -e "\n# Starship prompt\neval \"\$(starship init bash)\"" >> "$USER_HOME/.bashrc"
-        print_success "✅ Added starship to .bashrc."
-    else
-        print_success "✅ Starship already configured in .bashrc, skipping."
+# Ensure .bashrc exists for the user
+if [ ! -f "$USER_HOME/.bashrc" ]; then
+    print_warning "User's .bashrc not found. Creating a new one."
+    if ! sudo -u "$USER_NAME" touch "$USER_HOME/.bashrc"; then
+        print_error "Failed to create .bashrc for user '$USER_NAME'."
     fi
+fi
 
-    # Fastfetch
-    if ! sudo -u "$USER_NAME" grep -q "fastfetch" "$USER_HOME/.bashrc"; then
-        sudo -u "$USER_NAME" echo -e "\n# Run fastfetch on terminal startup\nfastfetch" >> "$USER_NAME/.bashrc"
-        print_success "✅ Added fastfetch to .bashrc."
-    else
-        print_success "✅ Fastfetch already configured in .bashrc, skipping."
-    fi
+# Starship
+if ! sudo -u "$USER_NAME" grep -q "eval \"\$(starship init bash)\"" "$USER_HOME/.bashrc"; then
+    sudo -u "$USER_NAME" echo -e "\n# Starship prompt\neval \"\$(starship init bash)\"" >> "$USER_HOME/.bashrc"
+    print_success "✅ Added starship to .bashrc."
 else
-    print_warning ".bashrc not found, skipping starship and fastfetch configuration. Please add them to your shell's config file."
+    print_success "✅ Starship already configured in .bashrc, skipping."
+fi
+
+# Fastfetch
+if ! sudo -u "$USER_NAME" grep -q "fastfetch" "$USER_HOME/.bashrc"; then
+    sudo -u "$USER_NAME" echo -e "\n# Run fastfetch on terminal startup\nfastfetch" >> "$USER_HOME/.bashrc"
+    print_success "✅ Added fastfetch to .bashrc."
+else
+    print_success "✅ Fastfetch already configured in .bashrc, skipping."
 fi
 
 
@@ -359,4 +363,3 @@ sudo -u "$USER_NAME" thunar &
 print_success "✅ Thunar restarted."
 
 print_success "\n🎉 The installation is complete! Please reboot your system to apply all changes."
-
