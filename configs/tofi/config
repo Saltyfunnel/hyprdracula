@@ -1,51 +1,88 @@
-# tofi configuration file
-# This file is for tofi, a dynamic menu for Wayland.
+# A clean, functional Tofi theme for the Dracula palette.
+# This config is optimized for stability by removing problematic icon settings.
 # Place this file in ~/.config/tofi/config
 
-# Dracula Color Palette
-# Background: #282a36
-# Foreground: #f8f8f2
-# Current Line/Selection Background: #44475a
-# Purple: #bd93f9
-# Pink: #ff79c6
-# Cyan: #8be9fd
+# --- Dracula Color Palette ---
+# Background:       #282a36
+# Foreground:       #f8f8f2
+# Selection:        #44475a
+# Purple:           #bd93f9
+# Pink:             #ff79c6
+# Cyan:             #8be9fd
+# Green:            #50fa7b
+# Yellow:           #f1fa8c
 
-# --- General Styling ---
-# Anchor the window to the center of the screen
+# --- General Window and Spacing ---
+# Anchors the window to the center of the screen
 anchor=center
-# Set the overall corner radius for the window
-corner-radius=8
-# Set the padding around the content
-padding=20
-# Set the width of the window as a percentage of the screen
-width=40%
+
+# Provides a large, clean space around the content
+padding=40
+
+# Creates a noticeable and modern rounded border
+corner-radius=15
+
+# Sets the window width to a perfect 50% of the screen
+width=50%
+
+# Ensures the height adjusts dynamically
+height-limit=0
+
+# Adds a stylish, solid border around the entire window
+border-width=2
 
 # --- Colors ---
-# Main window background color with transparency (DD = ~87% opacity)
-background-color=#282a36DD
-# The color of the text for the items
+# Main background with significant transparency (approx. 75% opacity)
+background-color=#282a36BF
+
+# A vibrant, solid border to frame the window
+border-color=#bd93f9
+
+# Default text color
 text-color=#f8f8f2
-# The color of the border outline
-outline-color=#282a36
-# The color of the prompt text
 prompt-color=#bd93f9
-# The background color of the selected item
+placeholder-color=#6272a4
+input-color=#f8f8f2
+
+# Text cursor color
+text-cursor-color=#f1fa8c
+text-cursor-width=2
+
+# Highlight color for the selected item's background
 selection-background=#44475a
-# The text color of the selected item
-selection-color=#ff79c6
-# The color of the text cursor
-text-cursor-color=#ff79c6
+
+# Highlight color for the selected item's text, adds a vibrant pop
+selection-color=#50fa7b
+selection-text-color=#f8f8f2
 
 # --- Fonts and Layout ---
-# A good font is important for performance. Replace this with a path to your preferred font.
-# font=/usr/share/fonts/nerd-fonts-complete/TTF/JetBrains Mono Regular Nerd Font Complete.ttf
-# Default font if the above is not found
-font="Sans"
-# Font size
-font-size=16
-# Spacing between results in pixels
-result-spacing=10
-# The maximum number of results to display. Set to 0 to auto-fit.
+# Use a common, bold Nerd Font for clear, professional text
+font="JetBrainsMono Nerd Font:size=16:weight=bold"
+font-size=24
+
+# This will hide the prompt icon
+prompt-text=
+
+# This provides a slight nudge for typing to avoid the edge of the input box
+prompt-spacing=10
+entry-spacing=15
+result-spacing=15
+
+# Show all results in the menu
 num-results=0
-# Prompt to display before the input field
-prompt-text=❯
+
+# --- Advanced Features ---
+# The following lines have been removed to prevent icon-related issues:
+# drun-launch-type=drun
+# drun-icon-theme=Dracula-icons
+# drun-use-fallback-icon=true
+
+# Enables a scrollable list for many results
+scrollable=true
+
+# Colors for the scrollbar
+scrollbar-color=#ff79c6
+scrollbar-thumb-color=#bd93f9
+
+# Sets a clean, thin scrollbar
+scrollbar-width=4
