@@ -283,6 +283,15 @@ else
     print_warning "gtk-update-icon-cache not found. Icons may not appear correctly until a reboot."
 fi
 
+# The missing piece: Install `libgnome-desktop` which provides `gsettings`.
+# This is crucial for persistent theming with GTK.
+if ! command -v gsettings &>/dev/null; then
+    print_header "Installing libgnome-desktop for persistent theming"
+    run_command "pacman -S --noconfirm libgnome-desktop" "Install libgnome-desktop"
+else
+    print_success "✅ gsettings already installed."
+fi
+
 GTK3_CONFIG="$CONFIG_DIR/gtk-3.0"
 GTK4_CONFIG="$CONFIG_DIR/gtk-4.0"
 sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
@@ -290,7 +299,6 @@ sudo -u "$USER_NAME" mkdir -p "$GTK3_CONFIG" "$GTK4_CONFIG"
 GTK_SETTINGS="[Settings]\ngtk-theme-name=dracula-gtk\ngtk-icon-theme-name=Dracula\ngtk-font-name=JetBrainsMono 10"
 sudo -u "$USER_NAME" bash -c "echo -e \"$GTK_SETTINGS\" | tee \"$GTK3_CONFIG/settings.ini\" \"$GTK4_CONFIG/settings.ini\" >/dev/null"
 
-# --- New block to apply gsettings ---
 # This is a more reliable way to apply GTK themes and icons for many desktops.
 if command -v gsettings &>/dev/null; then
     print_header "Applying GTK settings with gsettings"
@@ -300,7 +308,6 @@ if command -v gsettings &>/dev/null; then
 else
     print_warning "gsettings not found. GTK themes and icons may not apply to all applications. The settings.ini file has been configured as a fallback."
 fi
-# --- End of new block ---
 
 # Configure starship and fastfetch prompt
 print_header "Configuring Starship and Fastfetch prompt"
