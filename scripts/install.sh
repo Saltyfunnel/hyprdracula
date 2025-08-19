@@ -78,19 +78,7 @@ fi
 if ! command -v curl &>/dev/null; then
     print_error "curl is not installed. Please install it with 'sudo pacman -S curl'."
 fi
-if ! command -v sed &>/dev/null; then
-    print_warning "sed is not installed. Attempting to install it now."
-    run_command "pacman -S --noconfirm sed" "Install sed" "no"
-fi
-if ! command -v grep &>/dev/null; then
-    print_warning "grep is not installed. Attempting to install it now."
-    run_command "pacman -S --noconfirm grep" "Install grep" "no"
-fi
-if ! command -v tee &>/dev/null; then
-    print_warning "tee is not installed. Attempting to install it now."
-    run_command "pacman -S --noconfirm coreutils" "Install tee via coreutils" "no"
-fi
-print_success "✅ Required tools (git, curl, sed, grep, tee) confirmed."
+print_success "✅ Required tools (git, curl) confirmed."
 
 # --- System-level tasks ---
 print_header "Starting System-Level Setup"
@@ -106,6 +94,7 @@ PACKAGES=(
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
     waybar hyprland hyprpaper hypridle hyprlock starship fastfetch
+    sed grep coreutils
 )
 if ! pacman -Syu "${PACKAGES[@]:-}" --noconfirm; then
     print_error "Failed to install system packages."
