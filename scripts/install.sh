@@ -93,7 +93,7 @@ PACKAGES=(
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
     waybar hyprland hyprpaper hypridle hyprlock starship fastfetch
-    qt5-declarative qt5-quickcontrols2 qt5-graphicaleffects
+    qt5-declarative qt5-quickcontrols2 qt5-graphicaleffects qt5-svg ttf-font-awesome
 )
 pacman -Syu "${PACKAGES[@]:-}" --noconfirm
 print_success "✅ System updated and packages installed."
@@ -177,19 +177,18 @@ if [ ! -d "$SDDM_THEME_SRC" ]; then
     print_error "The 'corners' folder was not found in your repository assets at '$SDDM_THEME_SRC'. Please add it and re-run the script."
 fi
 
-# Set a safe fallback theme first to prevent a black screen
-run_command "sudo sed -i 's/^Current=.*/Current=breeze/' /etc/sddm.conf" "set SDDM fallback theme to Breeze"
+# The 'breeze' fallback theme check is removed to simplify logic.
+# A more direct approach to creating the config is used.
+
+# Create the SDDM theme destination directory if it doesn't exist
+run_command "sudo mkdir -p \"/usr/share/sddm/themes/\"" "create SDDM themes directory"
 
 # Copy the theme from the repository's assets to the system's themes directory.
 run_command "sudo cp -r \"$SDDM_THEME_SRC\" \"/usr/share/sddm/themes/\"" "copy corners from repository assets"
 
-# Set the configured theme as the default in SDDM's main config
-if [ -f "/etc/sddm.conf" ]; then
-    run_command "sudo sed -i 's/^Current=.*/Current=corners/' /etc/sddm.conf" "set SDDM default theme"
-else
-    print_warning "/etc/sddm.conf not found. Creating a new one."
-    run_command "sudo sh -c \"echo -e '[Theme]\nCurrent=corners' > /etc/sddm.conf\"" "create new SDDM config file"
-fi
+# Create a new, simple sddm.conf to set the theme.
+# This avoids the fragile sed command and the fallback logic.
+run_command "sudo sh -c \"echo -e '[Theme]\nCurrent=corners' > /etc/sddm.conf\"" "create new SDDM config file"
 print_success "✅ SDDM theming complete."
 # --- End of SDDM Theming ---
 
