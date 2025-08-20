@@ -167,17 +167,17 @@ append_if_missing "$BASHRC" "eval \"\$(starship init bash)\""
 # --- SDDM Theming ---
 print_header "Configuring SDDM theme and wallpaper"
 
-# Assuming the theme is located in the user's repository's assets directory.
-SDDM_THEME_SRC="$SCRIPT_DIR/assets/sddm/sddm-theme-corners"
+# Corrected path for the theme folder in your assets.
+SDDM_THEME_SRC="$SCRIPT_DIR/assets/sddm/corners"
 SDDM_THEME_DEST="/usr/share/sddm/themes/corners"
 
 # Check if the source directory exists.
 if [ ! -d "$SDDM_THEME_SRC" ]; then
-    print_error "sddm-theme-corners folder not found in your repository assets at '$SDDM_THEME_SRC'. Please add it and re-run the script."
+    print_error "The 'corners' folder was not found in your repository assets at '$SDDM_THEME_SRC'. Please add it and re-run the script."
 fi
 
 # Copy the theme from the repository's assets to the system's themes directory.
-run_command "sudo cp -r \"$SDDM_THEME_SRC\" \"/usr/share/sddm/themes/\"" "copy sddm-theme-corners from repository assets"
+run_command "sudo cp -r \"$SDDM_THEME_SRC\" \"/usr/share/sddm/themes/\"" "copy corners from repository assets"
 
 # Set the configured theme as the default in SDDM's main config
 if [ -f "/etc/sddm.conf" ]; then
