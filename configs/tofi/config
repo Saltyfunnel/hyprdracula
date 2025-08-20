@@ -1,88 +1,19 @@
-# A clean, functional Tofi theme for the Dracula palette.
-# This config is optimized for stability by removing problematic icon settings.
-# Place this file in ~/.config/tofi/config
+width = 50%
+height = 40%
+border-width = 0
+outline-width = 0
+padding-left = 1%
+padding-top = 1%
+result-spacing = 25
+num-results = 10
 
-# --- Dracula Color Palette ---
-# Background:       #282a36
-# Foreground:       #f8f8f2
-# Selection:        #44475a
-# Purple:           #bd93f9
-# Pink:             #ff79c6
-# Cyan:             #8be9fd
-# Green:            #50fa7b
-# Yellow:           #f1fa8c
+font = JetBrainsMono Nerd Font
+font-size = 12
 
-# --- General Window and Spacing ---
-# Anchors the window to the center of the screen
-anchor=center
+text-color = #f8f8f2
 
-# Provides a large, clean space around the content
-padding=40
+prompt-text = " : "
 
-# Creates a noticeable and modern rounded border
-corner-radius=15
-
-# Sets the window width to a perfect 50% of the screen
-width=50%
-
-# Ensures the height adjusts dynamically
-height-limit=0
-
-# Adds a stylish, solid border around the entire window
-border-width=2
-
-# --- Colors ---
-# Main background with significant transparency (approx. 75% opacity)
-background-color=#282a36BF
-
-# A vibrant, solid border to frame the window
-border-color=#bd93f9
-
-# Default text color
-text-color=#f8f8f2
-prompt-color=#bd93f9
-placeholder-color=#6272a4
-input-color=#f8f8f2
-
-# Text cursor color
-text-cursor-color=#f1fa8c
-text-cursor-width=2
-
-# Highlight color for the selected item's background
-selection-background=#44475a
-
-# Highlight color for the selected item's text, adds a vibrant pop
-selection-color=#50fa7b
-selection-text-color=#f8f8f2
-
-# --- Fonts and Layout ---
-# Use a common, bold Nerd Font for clear, professional text
-font="JetBrainsMono Nerd Font:size=16:weight=bold"
-font-size=24
-
-# This will hide the prompt icon
-prompt-text=
-
-# This provides a slight nudge for typing to avoid the edge of the input box
-prompt-spacing=10
-entry-spacing=15
-result-spacing=15
-
-# Show all results in the menu
-num-results=0
-
-# --- Advanced Features ---
-# The following lines have been removed to prevent icon-related issues:
-# drun-launch-type=drun
-# drun-icon-theme=Dracula-icons
-# drun-use-fallback-icon=true
-
-# Enables a scrollable list for many results
-scrollable=true
-
-# Colors for the scrollbar
-scrollbar-color=#ff79c6
-scrollbar-thumb-color=#bd93f9
-
-# Sets a clean, thin scrollbar
-scrollbar-width=4
+background-color = #282a36cc
+selection-color = #ffb86c
+selection-text-color = #f8f8f2
