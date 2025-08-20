@@ -114,7 +114,6 @@ fi
 print_header "Installing AUR apps via yay"
 AUR_APPS=(
     tofi
-    sddm-sugar-candy
 )
 
 for app in "${AUR_APPS[@]}"; do
@@ -168,32 +167,24 @@ append_if_missing "$BASHRC" "eval \"\$(starship init bash)\""
 # --- SDDM Theming ---
 print_header "Configuring SDDM theme and wallpaper"
 
-SDDM_THEME_DIR="/usr/share/sddm/themes/sugar-candy"
-SDDM_THEME_CONF="$SDDM_THEME_DIR/theme.conf"
-WALLPAPER_NAME="tree.png"
-WALLPAPER_PATH="$CONFIG_DIR/assets/backgrounds/$WALLPAPER_NAME"
+# Assuming the theme is located in the user's repository's assets directory.
+SDDM_THEME_SRC="$SCRIPT_DIR/assets/sddm/sddm-theme-corners"
+SDDM_THEME_DEST="/usr/share/sddm/themes/corners"
 
-# Copy the wallpaper to the theme directory
-if [ -f "$WALLPAPER_PATH" ]; then
-    run_command "sudo cp \"$WALLPAPER_PATH\" \"$SDDM_THEME_DIR/Backgrounds/\"" "copy custom wallpaper to SDDM theme"
-else
-    print_error "Wallpaper file not found at $WALLPAPER_PATH. Please check your assets folder."
+# Check if the source directory exists.
+if [ ! -d "$SDDM_THEME_SRC" ]; then
+    print_error "sddm-theme-corners folder not found in your repository assets at '$SDDM_THEME_SRC'. Please add it and re-run the script."
 fi
 
-# Configure the theme with Dracula colors and the custom wallpaper
-if [ -f "$SDDM_THEME_CONF" ]; then
-    run_command "sudo sed -i -e 's/^MainColor=.*/MainColor=\"#f8f8f2\"/' -e 's/^AccentColor=.*/AccentColor=\"#bd93f9\"/' -e 's/^BackgroundColor=.*/BackgroundColor=\"#282a36\"/' -e 's|^Background=\".*\"|Background=\"Backgrounds/$WALLPAPER_NAME\"|' \"$SDDM_THEME_CONF\"" "apply Dracula colors and wallpaper to theme config"
-    print_success "✅ SDDM theme configured successfully."
-else
-    print_error "SDDM theme config file not found. Installation may have failed."
-fi
+# Copy the theme from the repository's assets to the system's themes directory.
+run_command "sudo cp -r \"$SDDM_THEME_SRC\" \"/usr/share/sddm/themes/\"" "copy sddm-theme-corners from repository assets"
 
 # Set the configured theme as the default in SDDM's main config
 if [ -f "/etc/sddm.conf" ]; then
-    run_command "sudo sed -i 's/^Current=.*/Current=sugar-candy/' /etc/sddm.conf" "set SDDM default theme"
+    run_command "sudo sed -i 's/^Current=.*/Current=corners/' /etc/sddm.conf" "set SDDM default theme"
 else
     print_warning "/etc/sddm.conf not found. Creating a new one."
-    run_command "sudo sh -c \"echo -e '[Theme]\nCurrent=sugar-candy' > /etc/sddm.conf\"" "create new SDDM config file"
+    run_command "sudo sh -c \"echo -e '[Theme]\nCurrent=corners' > /etc/sddm.conf\"" "create new SDDM config file"
 fi
 print_success "✅ SDDM theming complete."
 # --- End of SDDM Theming ---
