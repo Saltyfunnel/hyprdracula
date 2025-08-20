@@ -34,7 +34,7 @@ You're brave. Here's how to get this nonsense on your system:
 
 ```bash
 git clone https://github.com/Saltyfunnel/hyprdracula
-cd hyprbw
+cd hyprdracula
 chmod +x scripts/*.sh
 cd scripts
 sudo sh install.sh
@@ -49,7 +49,7 @@ You should probably read that script first. It might overwrite stuff. Or break y
 - `waybar`
 - `wofi`
 - `kitty` or `alacritty` or whatever terminal I was using that week
-- `swww`, `playerctl`, `networkmanager`, `blueman`, `pipewire`, probably `dunst`, maybe `eww`, definitely pain
+- probably `dunst`, maybe `pipewire`, definitely pain
 - Fonts? Icons? GTK themes? You'll figure it out.
 
 ## 💀 What to Expect
@@ -66,9 +66,6 @@ You should probably read that script first. It might overwrite stuff. Or break y
 - **You**: For trying to use this.
 
 ## 😵 FAQ
-
-**Q: Why is this called HyprBW?**  
-A: I don’t know. It sounded cool at the time. Black & White? Brain Worms? Brutal Wasting?
 
 **Q: Is this actually usable?**  
 A: Depends on your definition of "usable." If you like your setup fragile and emotionally unstable, yes.
