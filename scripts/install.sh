@@ -93,6 +93,7 @@ PACKAGES=(
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
     waybar hyprland hyprpaper hypridle hyprlock starship fastfetch
+    qt5-declarative qt5-quickcontrols2 qt5-graphicaleffects
 )
 pacman -Syu "${PACKAGES[@]:-}" --noconfirm
 print_success "✅ System updated and packages installed."
@@ -175,6 +176,9 @@ SDDM_THEME_DEST="/usr/share/sddm/themes/corners"
 if [ ! -d "$SDDM_THEME_SRC" ]; then
     print_error "The 'corners' folder was not found in your repository assets at '$SDDM_THEME_SRC'. Please add it and re-run the script."
 fi
+
+# Set a safe fallback theme first to prevent a black screen
+run_command "sudo sed -i 's/^Current=.*/Current=breeze/' /etc/sddm.conf" "set SDDM fallback theme to Breeze"
 
 # Copy the theme from the repository's assets to the system's themes directory.
 run_command "sudo cp -r \"$SDDM_THEME_SRC\" \"/usr/share/sddm/themes/\"" "copy corners from repository assets"
