@@ -40,6 +40,16 @@ run_command() {
     print_success "✅ Success: '$description'"
 }
 
+copy_configs() {
+    local source_dir="$1"
+    local dest_dir="$2"
+    local config_name="$3"
+    print_success "Copying $config_name from '$source_dir' to '$dest_dir'."
+    sudo -u "$USER_NAME" mkdir -p "$dest_dir"
+    sudo -u "$USER_NAME" cp -r "$source_dir/." "$dest_dir"
+    print_success "✅ Copied $config_name."
+}
+
 # --- Main Execution Logic ---
 if [ "$EUID" -ne 0 ]; then
     print_error "This script must be run as root. Please run with 'sudo bash $0'."
@@ -113,17 +123,62 @@ for app in "${AUR_APPS[@]}"; do
 done
 print_success "✅ All AUR apps installed."
 
+# --- User-level tasks ---
+print_header "Starting User-Level Setup"
+
+# Copy assets folder to ~/.config FIRST
+ASSETS_SRC="$SCRIPT_DIR/assets"
+ASSETS_DEST="$CONFIG_DIR/assets"
+if [ -d "$ASSETS_SRC" ]; then
+    sudo -u "$USER_NAME" mkdir -p "$ASSETS_DEST"
+    sudo -u "$USER_NAME" cp -r "$ASSETS_SRC/." "$ASSETS_DEST"
+    print_success "✅ Assets folder copied to $ASSETS_DEST."
+else
+    print_warning "Assets folder not found at $ASSETS_SRC."
+fi
+
+# Copy standard configs
+copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
+copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
+copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
+copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
+copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
+copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
+
+# Copy starship.toml to root of ~/.config
+STARSHIP_SRC="$SCRIPT_DIR/configs/starship/starship.toml"
+if [ -f "$STARSHIP_SRC" ]; then
+    sudo -u "$USER_NAME" cp "$STARSHIP_SRC" "$CONFIG_DIR/"
+    print_success "✅ Copied starship.toml to $CONFIG_DIR"
+fi
+
+
+# Update .bashrc
+BASHRC="$USER_HOME/.bashrc"
+append_if_missing() {
+    local file="$1"
+    local line="$2"
+    if ! grep -Fxq "$line" "$file"; then
+        echo "$line" | sudo -u "$USER_NAME" tee -a "$file" >/dev/null
+    fi
+}
+append_if_missing "$BASHRC" "fastfetch"
+append_if_missing "$BASHRC" "eval \"\$(starship init bash)\""
+
 # --- SDDM Theming ---
 print_header "Configuring SDDM theme and wallpaper"
 
 SDDM_THEME_DIR="/usr/share/sddm/themes/sugar-candy"
 SDDM_THEME_CONF="$SDDM_THEME_DIR/theme.conf"
-WALLPAPER_PATH="$CONFIG_DIR/assets/backgrounds/tree.png"
 WALLPAPER_NAME="tree.png"
+WALLPAPER_PATH="$CONFIG_DIR/assets/backgrounds/$WALLPAPER_NAME"
 
-# Copy the wallpaper to the theme directory if it's not already there
-run_command "sudo mkdir -p \"$SDDM_THEME_DIR/Backgrounds\"" "create SDDM theme backgrounds folder"
-run_command "sudo cp \"$WALLPAPER_PATH\" \"$SDDM_THEME_DIR/Backgrounds/\"" "copy custom wallpaper to SDDM theme"
+# Copy the wallpaper to the theme directory
+if [ -f "$WALLPAPER_PATH" ]; then
+    run_command "sudo cp \"$WALLPAPER_PATH\" \"$SDDM_THEME_DIR/Backgrounds/\"" "copy custom wallpaper to SDDM theme"
+else
+    print_error "Wallpaper file not found at $WALLPAPER_PATH. Please check your assets folder."
+fi
 
 # Configure the theme with Dracula colors and the custom wallpaper
 if [ -f "$SDDM_THEME_CONF" ]; then
@@ -142,6 +197,7 @@ else
 fi
 print_success "✅ SDDM theming complete."
 # --- End of SDDM Theming ---
+
 
 # --- GPU Driver Installation ---
 print_header "Installing GPU Drivers"
@@ -166,58 +222,8 @@ systemctl enable --now polkit.service
 systemctl enable sddm.service
 print_success "✅ System services enabled."
 
-# --- User-level tasks ---
-print_header "Starting User-Level Setup"
-
-copy_configs() {
-    local source_dir="$1"
-    local dest_dir="$2"
-    local config_name="$3"
-    print_success "Copying $config_name from '$source_dir' to '$dest_dir'."
-    sudo -u "$USER_NAME" mkdir -p "$dest_dir"
-    sudo -u "$USER_NAME" cp -r "$source_dir/." "$dest_dir"
-    print_success "✅ Copied $config_name."
-}
-
-# Copy standard configs
-copy_configs "$SCRIPT_DIR/configs/waybar" "$CONFIG_DIR/waybar" "Waybar"
-copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
-copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
-copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
-copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
-copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
-
-# Copy starship.toml to root of ~/.config
-STARSHIP_SRC="$SCRIPT_DIR/configs/starship/starship.toml"
-if [ -f "$STARSHIP_SRC" ]; then
-    sudo -u "$USER_NAME" cp "$STARSHIP_SRC" "$CONFIG_DIR/"
-    print_success "✅ Copied starship.toml to $CONFIG_DIR"
-fi
-
-# Copy assets folder to ~/.config
-ASSETS_SRC="$SCRIPT_DIR/assets"
-ASSETS_DEST="$CONFIG_DIR/assets"
-if [ -d "$ASSETS_SRC" ]; then
-    sudo -u "$USER_NAME" mkdir -p "$ASSETS_DEST"
-    sudo -u "$USER_NAME" cp -r "$ASSETS_SRC/." "$ASSETS_DEST"
-    print_success "✅ Assets folder copied to $ASSETS_DEST."
-else
-    print_warning "Assets folder not found at $ASSETS_SRC."
-fi
-
-# Update .bashrc
-BASHRC="$USER_HOME/.bashrc"
-append_if_missing() {
-    local file="$1"
-    local line="$2"
-    if ! grep -Fxq "$line" "$file"; then
-        echo "$line" | sudo -u "$USER_NAME" tee -a "$file" >/dev/null
-    fi
-}
-append_if_missing "$BASHRC" "fastfetch"
-append_if_missing "$BASHRC" "eval \"\$(starship init bash)\""
-
 # --- GTK Themes and Icons ---
+print_header "Applying GTK Theme and Icons"
 THEMES_DIR="$USER_HOME/.themes"
 ICONS_DIR="$USER_HOME/.icons"
 
