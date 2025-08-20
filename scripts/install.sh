@@ -104,6 +104,7 @@ fi
 print_header "Installing AUR apps via yay"
 AUR_APPS=(
     tofi
+    sddm-sugar-candy
 )
 
 for app in "${AUR_APPS[@]}"; do
@@ -111,6 +112,36 @@ for app in "${AUR_APPS[@]}"; do
     sudo -u "$USER_NAME" yay -S --noconfirm "$app"
 done
 print_success "✅ All AUR apps installed."
+
+# --- SDDM Theming ---
+print_header "Configuring SDDM theme and wallpaper"
+
+SDDM_THEME_DIR="/usr/share/sddm/themes/sugar-candy"
+SDDM_THEME_CONF="$SDDM_THEME_DIR/theme.conf"
+WALLPAPER_PATH="$CONFIG_DIR/assets/backgrounds/tree.png"
+WALLPAPER_NAME="tree.png"
+
+# Copy the wallpaper to the theme directory if it's not already there
+run_command "sudo mkdir -p \"$SDDM_THEME_DIR/Backgrounds\"" "create SDDM theme backgrounds folder"
+run_command "sudo cp \"$WALLPAPER_PATH\" \"$SDDM_THEME_DIR/Backgrounds/\"" "copy custom wallpaper to SDDM theme"
+
+# Configure the theme with Dracula colors and the custom wallpaper
+if [ -f "$SDDM_THEME_CONF" ]; then
+    run_command "sudo sed -i -e 's/^MainColor=.*/MainColor=\"#f8f8f2\"/' -e 's/^AccentColor=.*/AccentColor=\"#bd93f9\"/' -e 's/^BackgroundColor=.*/BackgroundColor=\"#282a36\"/' -e 's|^Background=\".*\"|Background=\"Backgrounds/$WALLPAPER_NAME\"|' \"$SDDM_THEME_CONF\"" "apply Dracula colors and wallpaper to theme config"
+    print_success "✅ SDDM theme configured successfully."
+else
+    print_error "SDDM theme config file not found. Installation may have failed."
+fi
+
+# Set the configured theme as the default in SDDM's main config
+if [ -f "/etc/sddm.conf" ]; then
+    run_command "sudo sed -i 's/^Current=.*/Current=sugar-candy/' /etc/sddm.conf" "set SDDM default theme"
+else
+    print_warning "/etc/sddm.conf not found. Creating a new one."
+    run_command "sudo sh -c \"echo -e '[Theme]\nCurrent=sugar-candy' > /etc/sddm.conf\"" "create new SDDM config file"
+fi
+print_success "✅ SDDM theming complete."
+# --- End of SDDM Theming ---
 
 # --- GPU Driver Installation ---
 print_header "Installing GPU Drivers"
