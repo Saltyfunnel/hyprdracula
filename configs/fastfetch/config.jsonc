@@ -15,6 +15,7 @@
     "separator": "\u001b[38;2;248;248;242m : "
   },
   "modules": [
+    "break",
     {
       "type": "custom",
       "format": "  \u001b[38;2;189;147;249m               "
@@ -30,6 +31,10 @@
     {
       "type": "custom",
       "format": ""
+    },
+     {
+      "type": "title",
+      "key": "\u001b[38;2;189;147;249m   User"
     },
     {
       "type": "os",
@@ -68,46 +73,29 @@
       "type": "uptime",
       "key": "\u001b[38;2;139;233;253m  "
     },
-    {
-      "type": "custom",
-      "format": "\u001b[38;2;255;121;198m  󰊤 GitHub : Saltyfunnel"
-    },
+  
     {
       "type": "battery",
       "key": "\u001b[38;2;255;184;108m   Battery"
     },
-    "break",
-    {
-      "type": "title",
-      "key": "\u001b[38;2;189;147;249m   User"
-    },
-    {
-      "type": "custom",
-      "format": ""
-    },
-    {
-      "type": "cpu",
-      "format": "{1}",
-      "keyColor": "\u001b[38;2;189;147;249m"
-    },
-    {
-      "type": "gpu",
-      "format": "{2}",
-      "keyColor": "\u001b[38;2;139;233;253m"
-    },
-    {
-      "type": "gpu",
-      "format": "{3}",
-      "keyColor": "\u001b[38;2;255;184;108m"
-    },
-    {
+     {
       "type": "memory",
       "key": "\u001b[38;2;189;147;249m   Memory"
     },
+    "break",
+   {
+      "type": "custom",
+      "format": "\u001b[38;2;255;121;198m  󰊤 GitHub : Saltyfunnel"
+    },
     {
       "type": "custom",
       "format": ""
     },
+    {
+      "type": "custom",
+      "format": ""
+    },
+   
     "break",
     {
       "type": "custom",
