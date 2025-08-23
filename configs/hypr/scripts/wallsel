@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# Define the wallpaper directory using the $HOME environment variable
+WALLPAPER_DIR="$HOME/.config/assets/backgrounds/"
+#!/usr/bin/env bash
+
+# Define the wallpaper directory using the $HOME environment variable
+WALLPAPER_DIR="$HOME/.config/assets/backgrounds/"
+
+# Find image files, pipe them to tofi, and capture the user's selection.
+SELECTION=$(find "$WALLPAPER_DIR" -type f \( -name "*.jpg" -o -name "*.png" -o -name "*.jpeg" -o -name "*.gif" \) | sort | xargs -n 1 basename | tofi --prompt-text "Choose a wallpaper:" --width 800 --height 600)
+
+# If a wallpaper was selected, set it.
+if [ -n "$SELECTION" ]; then
+    # Construct the full path to the selected wallpaper.
+    WALLPAPER_PATH="$WALLPAPER_DIR/$SELECTION"
+
+    # Preload the wallpaper into hyprpaper's memory. This is a crucial step.
+    hyprctl hyprpaper preload "$WALLPAPER_PATH"
+
+    # Set the new wallpaper using the preloaded image.
+    # IMPORTANT: Replace 'eDP-1' with your monitor's name.
+    hyprctl hyprpaper wallpaper "DP-2,$WALLPAPER_PATH"
+
+    # Optional: Unload old wallpapers to free up resources.
+    # hyprctl hyprpaper unload all
+fi
