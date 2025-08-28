@@ -92,7 +92,7 @@ PACKAGES=(
     sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
     gvfs gvfs-mtp gvfs-gphoto2 gvfs-smb polkit polkit-gnome
-    waybar hyprland hypridle hyprlock starship fastfetch swaybc
+    waybar hyprland hypridle hyprlock starship fastfetch
     qt5-declarative qt5-quickcontrols2 qt5-graphicaleffects qt5-svg ttf-font-awesome
 )
 pacman -Syu "${PACKAGES[@]:-}" --noconfirm
