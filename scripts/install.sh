@@ -88,6 +88,7 @@ print_success "✅ Required tools (git, curl) confirmed."
 print_header "Starting System-Level Setup"
 PACKAGES=(
     git base-devel pipewire wireplumber pamixer brightnessctl
+    imagemagick fuzzel hyprpaper
     ttf-jetbrains-mono-nerd ttf-iosevka-nerd ttf-fira-code ttf-fira-mono
     sddm kitty nano tar unzip gnome-disk-utility code mpv dunst pacman-contrib exo firefox cava
     thunar thunar-archive-plugin thunar-volman tumbler ffmpegthumbnailer file-roller
@@ -97,31 +98,6 @@ PACKAGES=(
 )
 pacman -Syu "${PACKAGES[@]:-}" --noconfirm
 print_success "✅ System updated and packages installed."
-
-# --- AUR Helper: yay Installation ---
-print_header "Installing yay (AUR helper)"
-YAY_DIR="$USER_HOME/yay"
-
-if [ ! -d "$YAY_DIR" ]; then
-    sudo -u "$USER_NAME" git clone https://aur.archlinux.org/yay.git "$YAY_DIR"
-    cd "$YAY_DIR"
-    sudo -u "$USER_NAME" makepkg -si --noconfirm
-    cd "$SCRIPT_DIR" || exit
-else
-    print_success "✅ yay already installed."
-fi
-
-# --- AUR Apps Installation ---
-print_header "Installing AUR apps via yay"
-AUR_APPS=(
-    tofi
-)
-
-for app in "${AUR_APPS[@]}"; do
-    print_header "Installing $app via yay"
-    sudo -u "$USER_NAME" yay -S --noconfirm "$app"
-done
-print_success "✅ All AUR apps installed."
 
 # --- User-level tasks ---
 print_header "Starting User-Level Setup"
@@ -143,7 +119,7 @@ copy_configs "$SCRIPT_DIR/configs/hypr" "$CONFIG_DIR/hypr" "Hyprland"
 copy_configs "$SCRIPT_DIR/configs/kitty" "$CONFIG_DIR/kitty" "Kitty"
 copy_configs "$SCRIPT_DIR/configs/dunst" "$CONFIG_DIR/dunst" "Dunst"
 copy_configs "$SCRIPT_DIR/configs/fastfetch" "$CONFIG_DIR/fastfetch" "Fastfetch"
-copy_configs "$SCRIPT_DIR/configs/tofi" "$CONFIG_DIR/tofi" "Tofi"
+copy_configs "$SCRIPT_DIR/configs/fuzzel" "$CONFIG_DIR/fuzzel" "Fuzzel"
 
 # Copy starship.toml to root of ~/.config
 STARSHIP_SRC="$SCRIPT_DIR/configs/starship/starship.toml"
@@ -151,7 +127,6 @@ if [ -f "$STARSHIP_SRC" ]; then
     sudo -u "$USER_NAME" cp "$STARSHIP_SRC" "$CONFIG_DIR/"
     print_success "✅ Copied starship.toml to $CONFIG_DIR"
 fi
-
 
 # Update .bashrc
 BASHRC="$USER_HOME/.bashrc"
@@ -168,30 +143,17 @@ append_if_missing "$BASHRC" "eval \"\$(starship init bash)\""
 # --- SDDM Theming ---
 print_header "Configuring SDDM theme and wallpaper"
 
-# Corrected path for the theme folder in your assets.
 SDDM_THEME_SRC="$SCRIPT_DIR/assets/sddm/corners"
 SDDM_THEME_DEST="/usr/share/sddm/themes/corners"
 
-# Check if the source directory exists.
 if [ ! -d "$SDDM_THEME_SRC" ]; then
     print_error "The 'corners' folder was not found in your repository assets at '$SDDM_THEME_SRC'. Please add it and re-run the script."
 fi
 
-# The 'breeze' fallback theme check is removed to simplify logic.
-# A more direct approach to creating the config is used.
-
-# Create the SDDM theme destination directory if it doesn't exist
 run_command "sudo mkdir -p \"/usr/share/sddm/themes/\"" "create SDDM themes directory"
-
-# Copy the theme from the repository's assets to the system's themes directory.
 run_command "sudo cp -r \"$SDDM_THEME_SRC\" \"/usr/share/sddm/themes/\"" "copy corners from repository assets"
-
-# Create a new, simple sddm.conf to set the theme.
-# This avoids the fragile sed command and the fallback logic.
 run_command "sudo sh -c \"echo -e '[Theme]\nCurrent=corners' > /etc/sddm.conf\"" "create new SDDM config file"
 print_success "✅ SDDM theming complete."
-# --- End of SDDM Theming ---
-
 
 # --- GPU Driver Installation ---
 print_header "Installing GPU Drivers"
@@ -233,11 +195,9 @@ sudo -u "$USER_NAME" unzip -o "$ASSETS_DEST/Dracula.zip" -d "$ICONS_DIR"
 ACTUAL_ICON_DIR=$(sudo -u "$USER_NAME" find "$ICONS_DIR" -maxdepth 1 -mindepth 1 -type d -name "*Dracula*" | head -n 1)
 [ -n "$ACTUAL_ICON_DIR" ] && [ "$(basename "$ACTUAL_ICON_DIR")" != "Dracula" ] && sudo -u "$USER_NAME" mv "$ACTUAL_ICON_DIR" "$ICONS_DIR/Dracula"
 
-# Update icon cache
 command -v gtk-update-icon-cache &>/dev/null && \
 sudo -u "$USER_NAME" gtk-update-icon-cache -f -t "$ICONS_DIR/Dracula"
 
-# Apply GTK and icon themes via gsettings
 USER_DBUS="unix:path=/run/user/$(id -u $USER_NAME)/bus"
 sudo -u "$USER_NAME" DBUS_SESSION_BUS_ADDRESS="$USER_DBUS" \
 gsettings set org.gnome.desktop.interface gtk-theme "dracula-gtk"
